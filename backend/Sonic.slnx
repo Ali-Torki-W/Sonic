@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Sonic.Api/Sonic.Api.csproj" />
+  <Project Path="Sonic.Application/Sonic.Application.csproj" />
+  <Project Path="Sonic.Domain/Sonic.Domain.csproj" />
+  <Project Path="Sonic.Infrastructure/Sonic.Infrastructure.csproj" />
+</Solution>

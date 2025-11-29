@@ -1,0 +1,98 @@
+############################
+# OS / Editor Junk
+############################
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Linux
+*~
+
+# General
+*.log
+
+############################
+# IDE / Tools
+############################
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Rider / IntelliJ
+.idea/
+*.sln.iml
+
+# VS Code (comment out if you want to commit workspace config)
+.vscode/
+
+# JetBrains ReSharper
+_ReSharper*/
+*.[Rr]e[Ss]harper
+
+############################
+# .NET / Build Output
+############################
+bin/
+obj/
+out/
+TestResults/
+*.VisualState.xml
+*.vsp
+*.vspx
+*.vspscc
+*.coverage
+*.coveragexml
+
+# NuGet
+packages/
+*.nupkg
+project.lock.json
+.nuget/
+
+############################
+# User secrets / local config
+############################
+# Don’t commit local-only appsettings variants
+appsettings.*.Local.json
+appsettings.Local.json
+
+# ASP.NET user secrets (just in case)
+**/UserSecrets/
+
+############################
+# Node / Angular
+############################
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Angular build artifacts
+.angular/
+dist/
+coverage/
+
+############################
+# Frontend tooling
+############################
+# Optional: if you use storybook, cypress, etc., uncomment as needed
+# .storybook-out/
+# cypress/videos/
+# cypress/screenshots/
+
+############################
+# Misc
+############################
+*.tmp
+*.swp
+*.swo
