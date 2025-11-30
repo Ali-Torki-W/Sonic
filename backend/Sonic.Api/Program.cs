@@ -1,41 +1,36 @@
+using MongoDB.Bson;
+using MongoDB.Driver;
+using Sonic.Infrastructure;
+using Sonic.Infrastructure.Config;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDbSettings"));
+builder.Services.AddSingleton<MongoDbContext>();
+
+builder.Services.AddControllers();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// --- Mongo health check ---
+app.MapGet("/db-health", async (MongoDbContext dbContext) =>
 {
-    app.MapOpenApi();
-}
+    try
+    {
+        // This sends a ping to MongoDB, no collections required
+        var command = new BsonDocument("ping", 1);
+        await dbContext
+            .GetDatabase() // we'll add this helper
+            .RunCommandAsync<BsonDocument>(command);
 
-app.UseHttpsRedirection();
+        return Results.Ok(new { status = "OK", message = "MongoDB reachable" });
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem($"MongoDB health check failed: {ex.Message}");
+    }
+});
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+app.MapControllers();
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
