@@ -1,4 +1,3 @@
-using System;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -14,7 +13,6 @@ namespace Sonic.Infrastructure.Auth;
 public sealed class JwtTokenGenerator : IJwtTokenGenerator
 {
     private readonly JwtOptions _options;
-    private readonly byte[] _secretKeyBytes;
 
     public JwtTokenGenerator(IOptions<JwtOptions> options)
     {
@@ -22,30 +20,28 @@ public sealed class JwtTokenGenerator : IJwtTokenGenerator
 
         if (string.IsNullOrWhiteSpace(_options.Secret) || _options.Secret.Length < 32)
         {
-            throw new InvalidOperationException("JWT Secret is not configured or too short (min 32 chars).");
+            throw new InvalidOperationException(
+                "JWT Secret is not configured or is too short (min 32 characters).");
         }
-
-        _secretKeyBytes = Encoding.UTF8.GetBytes(_options.Secret);
     }
 
     public AuthToken GenerateToken(User user)
     {
         if (user is null) throw new ArgumentNullException(nameof(user));
 
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.Secret));
+        var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
         var now = DateTime.UtcNow;
-        var expires = now.AddMinutes(_options.AccessTokenMinutes <= 0 ? 60 : _options.AccessTokenMinutes);
+        var expires = now.AddMinutes(_options.AccessTokenMinutes);
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(JwtRegisteredClaimNames.Sub, user.Id),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim(JwtRegisteredClaimNames.UniqueName, user.DisplayName),
-            new Claim(ClaimTypes.Role, user.Role.ToString())
+            new(JwtRegisteredClaimNames.Sub, user.Id),
+            new(JwtRegisteredClaimNames.Email, user.Email),
+            new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            new("role", user.Role.ToString())
         };
-
-        var credentials = new SigningCredentials(
-            new SymmetricSecurityKey(_secretKeyBytes),
-            SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
             issuer: _options.Issuer,
@@ -53,16 +49,12 @@ public sealed class JwtTokenGenerator : IJwtTokenGenerator
             claims: claims,
             notBefore: now,
             expires: expires,
-            signingCredentials: credentials);
+            signingCredentials: creds
+        );
 
         var handler = new JwtSecurityTokenHandler();
-        var jwt = handler.WriteToken(token);
+        var tokenString = handler.WriteToken(token);
 
-        return new AuthToken(jwt, expires);
-    }
-
-    AuthToken IJwtTokenGenerator.GenerateToken(User user)
-    {
-        throw new NotImplementedException();
+        return new AuthToken(tokenString, expires);
     }
 }
