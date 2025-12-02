@@ -1,7 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using MongoDB.Driver;
 
-namespace Sonic.Infrastructure;
+namespace Sonic.Infrastructure.Config;
 
 public class MongoDbContext
 {

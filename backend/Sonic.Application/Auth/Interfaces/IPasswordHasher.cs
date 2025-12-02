@@ -1,4 +1,4 @@
-namespace Sonic.Application.Auth;
+namespace Sonic.Application.Auth.interfaces;
 
 public interface IPasswordHasher
 {

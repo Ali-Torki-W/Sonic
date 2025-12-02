@@ -1,14 +1,20 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Sonic.Api.MiddleWares;          // adjust if your middleware namespace differs
+using Sonic.Api.MiddleWares;
 using Sonic.Application.Auth;
+using Sonic.Application.Auth.interfaces;
+using Sonic.Application.Auth.Services;
+using Sonic.Application.Users;
+using Sonic.Domain.Users;
 using Sonic.Infrastructure;
 using Sonic.Infrastructure.Auth;
 using Sonic.Infrastructure.Config;
+using Sonic.Infrastructure.Users;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +29,10 @@ builder.Services.Configure<MongoDbSettings>(
 builder.Services.AddSingleton<MongoDbContext>();
 builder.Services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
 builder.Services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
+
+// ---------- Application services / repositories ----------
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 // ---------- MVC / controllers ----------
 builder.Services.AddControllers();
@@ -59,7 +69,7 @@ builder.Services
             ClockSkew = TimeSpan.FromMinutes(1)
         };
 
-        // Keep JWT claims as-is ("sub", "email", "role" etc.)
+        // Keep JWT claim names as-is ("sub", "email", "role", ...)
         options.MapInboundClaims = false;
         JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
     });
@@ -75,7 +85,7 @@ var app = builder.Build();
 // ---------- Pipeline ----------
 app.UseRouting();
 
-// Global error handling (from W1-02)
+// Global error handling
 app.UseMiddleware<ErrorHandlingMiddleware>();
 
 app.UseAuthentication();
@@ -124,6 +134,27 @@ app.MapGet("/auth-test", (HttpContext httpContext) =>
         role
     });
 }).RequireAuthorization();
+
+// ---------- DEV-ONLY: test token endpoint (you can delete this later) ----------
+app.MapPost("/dev/token", (IJwtTokenGenerator tokenGenerator) =>
+{
+    var user = User.CreateNew(
+        email: "devuser@sonic.local",
+        passwordHash: "ignored-in-this-endpoint",
+        displayName: "Dev User",
+        role: UserRole.Admin);
+
+    var token = tokenGenerator.GenerateToken(user);
+
+    return Results.Ok(new
+    {
+        token = token.AccessToken,
+        expiresAtUtc = token.ExpiresAtUtc,
+        userId = user.Id,
+        email = user.Email,
+        role = user.Role.ToString()
+    });
+}).AllowAnonymous();
 
 app.MapControllers();
 

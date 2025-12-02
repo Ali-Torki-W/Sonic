@@ -5,6 +5,8 @@ using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Sonic.Application.Auth;
+using Sonic.Application.Auth.DTOs;
+using Sonic.Application.Auth.interfaces;
 using Sonic.Domain.Users;
 
 namespace Sonic.Infrastructure.Auth;
@@ -57,5 +59,10 @@ public sealed class JwtTokenGenerator : IJwtTokenGenerator
         var jwt = handler.WriteToken(token);
 
         return new AuthToken(jwt, expires);
+    }
+
+    AuthToken IJwtTokenGenerator.GenerateToken(User user)
+    {
+        throw new NotImplementedException();
     }
 }

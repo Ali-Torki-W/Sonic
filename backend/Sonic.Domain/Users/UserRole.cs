@@ -1,4 +1,4 @@
-namespace Sonic.Domain.User;
+namespace Sonic.Domain.Users;
 
 public enum UserRole
 {

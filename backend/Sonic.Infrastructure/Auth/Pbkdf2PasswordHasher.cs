@@ -1,6 +1,7 @@
 using System;
 using System.Security.Cryptography;
 using Sonic.Application.Auth;
+using Sonic.Application.Auth.interfaces;
 
 namespace Sonic.Infrastructure.Auth;
 

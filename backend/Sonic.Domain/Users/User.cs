@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Sonic.Domain.User;
+using Sonic.Domain.Users;
 
 namespace Sonic.Domain.Users;
 
@@ -82,6 +82,33 @@ public sealed class User
         }
 
         Validate();
+    }
+
+    public static User FromPersistence(
+    string id,
+    string email,
+    string passwordHash,
+    string displayName,
+    UserRole role,
+    DateTime createdAt,
+    DateTime updatedAt,
+    IEnumerable<string>? interests = null,
+    string? bio = null,
+    string? jobRole = null,
+    string? avatarUrl = null)
+    {
+        return new User(
+            id: id,
+            email: email,
+            passwordHash: passwordHash,
+            displayName: displayName,
+            role: role,
+            createdAt: createdAt,
+            updatedAt: updatedAt,
+            interests: interests,
+            bio: bio,
+            jobRole: jobRole,
+            avatarUrl: avatarUrl);
     }
 
     /// <summary>
