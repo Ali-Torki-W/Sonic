@@ -1,19 +1,18 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Bson;
-using MongoDB.Driver;
 using Sonic.Api.MiddleWares;
-using Sonic.Application.Auth;
 using Sonic.Application.Auth.interfaces;
 using Sonic.Application.Auth.Services;
+using Sonic.Application.Posts.interfaces;
+using Sonic.Application.Posts.Services;
 using Sonic.Application.Users;
 using Sonic.Domain.Users;
-using Sonic.Infrastructure;
 using Sonic.Infrastructure.Auth;
 using Sonic.Infrastructure.Config;
+using Sonic.Infrastructure.Posts;
 using Sonic.Infrastructure.Users;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,6 +32,9 @@ builder.Services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
 // ---------- Application services / repositories ----------
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+
+builder.Services.AddScoped<IPostRepository, PostRepository>();
+builder.Services.AddScoped<IPostService, PostService>();
 
 // ---------- MVC / controllers ----------
 builder.Services.AddControllers();
