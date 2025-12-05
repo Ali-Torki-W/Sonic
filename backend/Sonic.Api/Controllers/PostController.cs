@@ -1,0 +1,127 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using Sonic.Application.Posts;
+using Sonic.Application.Posts.DTOs;
+using Sonic.Application.Posts.interfaces;
+using Sonic.Domain.Posts;
+
+namespace Sonic.Api.Controllers;
+
+[Route("api/[controller]")]
+[ApiController]
+public class PostController(IPostService postService) : ControllerBase
+{
+    private readonly IPostService _postService = postService;
+
+    // CREATE: POST /posts
+    [HttpPost]
+    [Authorize]
+    public async Task<IActionResult> CreatePost(
+        [FromBody] CreatePostRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (request is null) return BadRequest("Invalid request data.");
+
+        var authorId = User.FindFirst("sub")?.Value;  // Claims-based author ID from JWT
+
+        if (string.IsNullOrEmpty(authorId))
+            return Unauthorized("Author is not authenticated.");
+
+        var post = await _postService.CreatePostAsync(request, authorId, cancellationToken);
+
+        var response = new PostResponse
+        {
+            Id = post.Id,
+            Title = post.Title,
+            Body = post.Body,
+            Tags = post.Tags.ToList(),
+            ExternalLink = post.ExternalLink,
+            AuthorId = post.AuthorId,
+            CreatedAt = post.CreatedAt,
+            UpdatedAt = post.UpdatedAt,
+            IsFeatured = post.IsFeatured
+        };
+
+        return CreatedAtAction(nameof(GetPostById), new { id = response.Id }, response);
+    }
+
+    // GET: /posts/{id}
+    [HttpGet("{id}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetPostById(
+        string id,
+        CancellationToken cancellationToken = default)
+    {
+        var post = await _postService.GetPostByIdAsync(id, cancellationToken);
+
+        if (post == null)
+            return NotFound("Post not found.");
+
+        var response = new PostResponse
+        {
+            Id = post.Id,
+            Title = post.Title,
+            Body = post.Body,
+            Tags = post.Tags.ToList(),
+            ExternalLink = post.ExternalLink,
+            AuthorId = post.AuthorId,
+            CreatedAt = post.CreatedAt,
+            UpdatedAt = post.UpdatedAt,
+            IsFeatured = post.IsFeatured
+        };
+
+        return Ok(response);
+    }
+
+    // UPDATE: PUT /posts/{id}
+    [HttpPut("{id}")]
+    [Authorize]
+    public async Task<IActionResult> UpdatePost(
+        string id,
+        [FromBody] UpdatePostRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (request is null) return BadRequest("Invalid request data.");
+
+        var userId = User.FindFirst("sub")?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized("You must be logged in.");
+
+        var isAdmin = User.IsInRole("Admin"); // Check if the user is admin
+
+        var post = await _postService.UpdatePostAsync(id, request, userId, isAdmin, cancellationToken);
+
+        var response = new PostResponse
+        {
+            Id = post.Id,
+            Title = post.Title,
+            Body = post.Body,
+            Tags = post.Tags.ToList(),
+            ExternalLink = post.ExternalLink,
+            AuthorId = post.AuthorId,
+            CreatedAt = post.CreatedAt,
+            UpdatedAt = post.UpdatedAt,
+            IsFeatured = post.IsFeatured
+        };
+
+        return Ok(response);
+    }
+
+    // DELETE: DELETE /posts/{id}
+    [HttpDelete("{id}")]
+    [Authorize]
+    public async Task<IActionResult> DeletePost(
+        string id,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = User.FindFirst("sub")?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized("You must be logged in.");
+
+        var isAdmin = User.IsInRole("Admin");
+
+        await _postService.DeletePostAsync(id, userId, isAdmin, cancellationToken);
+
+        return NoContent(); // Successfully deleted (soft-delete)
+    }
+}
