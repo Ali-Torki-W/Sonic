@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sonic.Application.Common.Pagination;
 using Sonic.Application.Posts;
 using Sonic.Application.Posts.DTOs;
 using Sonic.Application.Posts.interfaces;
@@ -12,6 +13,29 @@ namespace Sonic.Api.Controllers;
 public class PostController(IPostService postService) : ControllerBase
 {
     private readonly IPostService _postService = postService;
+
+    [HttpGet]
+    [AllowAnonymous]
+    public async Task<ActionResult<PagedResult<PostResponse>>> GetFeed(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] PostType? type = null,
+        [FromQuery] string? tag = null,
+        [FromQuery(Name = "q")] string? search = null,
+        [FromQuery] bool? featured = null,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await _postService.GetFeedAsync(
+            page: page,
+            pageSize: pageSize,
+            type: type,
+            tag: tag,
+            search: search,
+            featured: featured,
+            cancellationToken: cancellationToken);
+
+        return Ok(result);
+    }
 
     // CREATE: POST /posts
     [HttpPost]

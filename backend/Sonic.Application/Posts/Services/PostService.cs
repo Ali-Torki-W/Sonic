@@ -1,4 +1,5 @@
 using Sonic.Application.Common.Errors;
+using Sonic.Application.Common.Pagination;
 using Sonic.Application.Posts.DTOs;
 using Sonic.Application.Posts.interfaces;
 using Sonic.Domain.Posts;
@@ -108,6 +109,36 @@ public sealed class PostService(IPostRepository postRepository) : IPostService
 
         await _postRepository.UpdateAsync(post, cancellationToken);
     }
+
+    public async Task<PagedResult<PostResponse>> GetFeedAsync(
+        int page,
+        int pageSize,
+        PostType? type = null,
+        string? tag = null,
+        string? search = null,
+        bool? featured = null,
+        CancellationToken cancellationToken = default)
+    {
+        // Repository normalizes page/pageSize (page<1 =>1, pageSize<=0=>10),
+        // so we don't need to throw 400 here unless you want strict behavior.
+        var result = await _postRepository.QueryAsync(
+            page: page,
+            pageSize: pageSize,
+            type: type,
+            tag: tag,
+            search: search,
+            featured: featured,
+            cancellationToken: cancellationToken);
+
+        return new PagedResult<PostResponse>
+        {
+            Page = result.Page,
+            PageSize = result.PageSize,
+            TotalItems = result.TotalItems,
+            Items = result.Items.Select(ToResponse).ToList()
+        };
+    }
+
 
     private static PostResponse ToResponse(Post post)
     {
