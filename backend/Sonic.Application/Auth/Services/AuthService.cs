@@ -1,8 +1,6 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
 using Sonic.Application.Auth.DTOs;
 using Sonic.Application.Auth.interfaces;
+using Sonic.Application.Common.Errors;
 using Sonic.Application.Users;
 using Sonic.Domain.Users;
 
@@ -17,36 +15,30 @@ public sealed class AuthService(
     private readonly IPasswordHasher _passwordHasher = passwordHasher;
     private readonly IJwtTokenGenerator _jwtTokenGenerator = jwtTokenGenerator;
 
-    public async Task<RegisterResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+    public async Task<RegisterResponse> RegisterAsync(
+        RegisterRequest request,
+        CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(request);
+        if (request is null) throw new ArgumentNullException(nameof(request));
 
         if (string.IsNullOrWhiteSpace(request.Email))
-        {
-            throw new ArgumentException("Email is required.", nameof(request.Email));
-        }
+            throw Errors.BadRequest("Email is required.", "auth.email_required");
 
         if (string.IsNullOrWhiteSpace(request.Password))
-        {
-            throw new ArgumentException("Password is required.", nameof(request.Password));
-        }
+            throw Errors.BadRequest("Password is required.", "auth.password_required");
 
         if (string.IsNullOrWhiteSpace(request.DisplayName))
-        {
-            throw new ArgumentException("Display name is required.", nameof(request.DisplayName));
-        }
+            throw Errors.BadRequest("Display name is required.", "auth.displayname_required");
 
-        // Check for existing user with same email
         var existing = await _userRepository.GetByEmailAsync(request.Email, cancellationToken);
         if (existing is not null)
         {
-            // Generic message; frontend can show "email already in use"
-            throw new InvalidOperationException("Email is already in use.");
+            // This is the duplicate email case → 409, not 500
+            throw Errors.Conflict("Email is already in use.", "auth.email_in_use");
         }
 
         var passwordHash = _passwordHasher.Hash(request.Password);
 
-        // Domain will normalize email + display name and enforce invariants
         var user = User.CreateNew(
             email: request.Email,
             passwordHash: passwordHash,
@@ -68,27 +60,29 @@ public sealed class AuthService(
         };
     }
 
-    public async Task<LoginResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
+    public async Task<LoginResponse> LoginAsync(
+        LoginRequest request,
+        CancellationToken cancellationToken = default)
     {
         if (request is null) throw new ArgumentNullException(nameof(request));
 
         if (string.IsNullOrWhiteSpace(request.Email) ||
             string.IsNullOrWhiteSpace(request.Password))
         {
-            throw new InvalidOperationException("Invalid credentials.");
+            throw Errors.BadRequest("Email and password are required.", "auth.missing_credentials");
         }
 
         var user = await _userRepository.GetByEmailAsync(request.Email, cancellationToken);
         if (user is null)
         {
-            // Don’t leak whether email exists
-            throw new InvalidOperationException("Invalid credentials.");
+            // Do not leak if email exists or not
+            throw Errors.Unauthorized("Invalid email or password.", "auth.invalid_credentials");
         }
 
         var passwordValid = _passwordHasher.Verify(request.Password, user.PasswordHash);
         if (!passwordValid)
         {
-            throw new InvalidOperationException("Invalid credentials.");
+            throw Errors.Unauthorized("Invalid email or password.", "auth.invalid_credentials");
         }
 
         var token = _jwtTokenGenerator.GenerateToken(user);

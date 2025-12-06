@@ -82,6 +82,9 @@ builder.Services.AddAuthorization(options =>
         policy.RequireRole("Admin"));
 });
 
+// ---------- ErrorHandling ----------
+builder.Services.AddTransient<ErrorHandlingMiddleware>();
+
 var app = builder.Build();
 
 // ---------- Pipeline ----------

@@ -1,65 +1,77 @@
-using System.Net;
-using System.Text.Json;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
+using Microsoft.AspNetCore.Mvc;
+using Sonic.Application.Common.Errors;
 
 namespace Sonic.Api.MiddleWares;
 
-public sealed class ErrorHandlingMiddleware
+public sealed class ErrorHandlingMiddleware : IMiddleware
 {
-    private readonly RequestDelegate _next;
     private readonly ILogger<ErrorHandlingMiddleware> _logger;
 
-    private static readonly JsonSerializerOptions JsonOptions = new()
+    public ErrorHandlingMiddleware(ILogger<ErrorHandlingMiddleware> logger)
     {
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-    };
-
-    public ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandlingMiddleware> logger)
-    {
-        _next = next ?? throw new ArgumentNullException(nameof(next));
-        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        _logger = logger;
     }
 
-    public async Task InvokeAsync(HttpContext context)
+    public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {
         try
         {
-            await _next(context);
+            await next(context);
         }
         catch (Exception ex)
         {
+            var (statusCode, errorCode, detail) = MapException(ex);
+
             _logger.LogError(
                 ex,
-                "Unhandled exception while processing request {Method} {Path}",
+                "Unhandled exception while processing {Method} {Path}. Returning {StatusCode}.",
                 context.Request.Method,
-                context.Request.Path
-            );
+                context.Request.Path,
+                statusCode);
 
-            await WriteErrorResponseAsync(context);
+            if (context.Response.HasStarted)
+            {
+                _logger.LogWarning(
+                    "The response has already started, cannot write error response.");
+                throw;
+            }
+
+            context.Response.StatusCode = statusCode;
+            context.Response.ContentType = "application/json";
+
+            var problem = new ProblemDetails
+            {
+                Status = statusCode,
+                Title = statusCode >= 500 ? "Internal server error" : "Error",
+                Detail = detail,
+                Instance = context.TraceIdentifier
+            };
+
+            if (!string.IsNullOrWhiteSpace(errorCode))
+            {
+                problem.Extensions["code"] = errorCode;
+            }
+
+            await context.Response.WriteAsJsonAsync(problem);
         }
     }
 
-    private static async Task WriteErrorResponseAsync(HttpContext context)
+    private static (int StatusCode, string? ErrorCode, string Detail) MapException(Exception ex)
     {
-        if (context.Response.HasStarted)
+        // Our explicit application errors
+        if (ex is ApiException apiEx)
         {
-            return;
+            return (apiEx.StatusCode, apiEx.ErrorCode, apiEx.Message);
         }
 
-        context.Response.Clear();
-        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
-        context.Response.ContentType = "application/json";
+        // Basic “bad input” case from our own guards
+        if (ex is ArgumentException argEx)
+        {
+            return (400, null, argEx.Message);
+        }
 
-        var error = new ApiError(
-            context.Response.StatusCode,
-            "An unexpected error occurred.",
-            context.TraceIdentifier
-        );
-
-        var json = JsonSerializer.Serialize(error, JsonOptions);
-        await context.Response.WriteAsync(json);
+        // Everything else = real server bug
+        return (500, null, "An unexpected error occurred while processing your request.");
     }
 }
-
-public sealed record ApiError(int StatusCode, string Message, string? TraceId);

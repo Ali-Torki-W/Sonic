@@ -1,3 +1,4 @@
+using Sonic.Application.Common.Errors;
 using Sonic.Application.Posts.DTOs;
 using Sonic.Application.Posts.interfaces;
 using Sonic.Domain.Posts;
@@ -15,7 +16,7 @@ public sealed class PostService(IPostRepository postRepository) : IPostService
     {
         if (request is null) throw new ArgumentNullException(nameof(request));
         if (string.IsNullOrWhiteSpace(authorId))
-            throw new ArgumentException("AuthorId is required.", nameof(authorId));
+            throw Errors.BadRequest("AuthorId is required.", "post.author_required");
 
         var post = Post.CreateNew(
             type: request.Type,
@@ -35,12 +36,12 @@ public sealed class PostService(IPostRepository postRepository) : IPostService
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(id))
-            throw new ArgumentException("Post id is required.", nameof(id));
+            throw Errors.BadRequest("Post id is required.", "post.id_required");
 
         var post = await _postRepository.GetByIdAsync(id, cancellationToken);
         if (post is null)
         {
-            throw new InvalidOperationException("Post not found.");
+            throw Errors.NotFound("Post not found.", "post.not_found");
         }
 
         return ToResponse(post);
@@ -55,19 +56,19 @@ public sealed class PostService(IPostRepository postRepository) : IPostService
     {
         if (request is null) throw new ArgumentNullException(nameof(request));
         if (string.IsNullOrWhiteSpace(id))
-            throw new ArgumentException("Post id is required.", nameof(id));
+            throw Errors.BadRequest("Post id is required.", "post.id_required");
         if (string.IsNullOrWhiteSpace(currentUserId))
-            throw new ArgumentException("Current user id is required.", nameof(currentUserId));
+            throw Errors.BadRequest("Current user id is required.", "post.current_user_required");
 
         var post = await _postRepository.GetByIdAsync(id, cancellationToken);
         if (post is null)
         {
-            throw new InvalidOperationException("Post not found.");
+            throw Errors.NotFound("Post not found.", "post.not_found");
         }
 
         if (!isAdmin && !string.Equals(post.AuthorId, currentUserId, StringComparison.Ordinal))
         {
-            throw new UnauthorizedAccessException("You are not allowed to update this post.");
+            throw Errors.Forbidden("You are not allowed to update this post.", "post.forbidden_update");
         }
 
         post.UpdateContent(
@@ -88,26 +89,24 @@ public sealed class PostService(IPostRepository postRepository) : IPostService
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(id))
-            throw new ArgumentException("Post id is required.", nameof(id));
+            throw Errors.BadRequest("Post id is required.", "post.id_required");
         if (string.IsNullOrWhiteSpace(currentUserId))
-            throw new ArgumentException("Current user id is required.", nameof(currentUserId));
+            throw Errors.BadRequest("Current user id is required.", "post.current_user_required");
 
         var post = await _postRepository.GetByIdAsync(id, cancellationToken);
         if (post is null)
         {
-            throw new InvalidOperationException("Post not found.");
+            throw Errors.NotFound("Post not found.", "post.not_found");
         }
 
         if (!isAdmin && !string.Equals(post.AuthorId, currentUserId, StringComparison.Ordinal))
         {
-            throw new UnauthorizedAccessException("You are not allowed to delete this post.");
+            throw Errors.Forbidden("You are not allowed to delete this post.", "post.forbidden_delete");
         }
 
-        // Use domain soft-delete
         post.MarkDeleted();
 
         await _postRepository.UpdateAsync(post, cancellationToken);
-        // SoftDeleteAsync is available for other use-cases (e.g. Admin bulk ops) if needed
     }
 
     private static PostResponse ToResponse(Post post)
