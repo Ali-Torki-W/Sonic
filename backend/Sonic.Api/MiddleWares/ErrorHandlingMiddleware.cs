@@ -4,14 +4,9 @@ using Sonic.Application.Common.Errors;
 
 namespace Sonic.Api.MiddleWares;
 
-public sealed class ErrorHandlingMiddleware : IMiddleware
+public sealed class ErrorHandlingMiddleware(ILogger<ErrorHandlingMiddleware> logger) : IMiddleware
 {
-    private readonly ILogger<ErrorHandlingMiddleware> _logger;
-
-    public ErrorHandlingMiddleware(ILogger<ErrorHandlingMiddleware> logger)
-    {
-        _logger = logger;
-    }
+    private readonly ILogger<ErrorHandlingMiddleware> _logger = logger;
 
     public async Task InvokeAsync(HttpContext context, RequestDelegate next)
     {

@@ -8,8 +8,8 @@ using Sonic.Domain.Posts;
 
 namespace Sonic.Api.Controllers;
 
-[Route("api/[controller]")]
 [ApiController]
+[Route("posts")]
 public class PostController(IPostService postService) : ControllerBase
 {
     private readonly IPostService _postService = postService;
@@ -66,7 +66,7 @@ public class PostController(IPostService postService) : ControllerBase
             IsFeatured = post.IsFeatured
         };
 
-        return CreatedAtAction(nameof(GetPostById), new { id = response.Id }, response);
+        return Ok(response);
     }
 
     // GET: /posts/{id}
@@ -111,7 +111,7 @@ public class PostController(IPostService postService) : ControllerBase
         if (string.IsNullOrEmpty(userId))
             return Unauthorized("You must be logged in.");
 
-        var isAdmin = User.IsInRole("Admin"); // Check if the user is admin
+        var isAdmin = User.IsInRole("Admin");
 
         var post = await _postService.UpdatePostAsync(id, request, userId, isAdmin, cancellationToken);
 

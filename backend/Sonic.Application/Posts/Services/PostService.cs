@@ -19,6 +19,13 @@ public sealed class PostService(IPostRepository postRepository) : IPostService
         if (string.IsNullOrWhiteSpace(authorId))
             throw Errors.BadRequest("AuthorId is required.", "post.author_required");
 
+        if (string.IsNullOrWhiteSpace(request.Title))
+            throw Errors.BadRequest("Title is required.", "post.title_required");
+
+        if (string.IsNullOrWhiteSpace(request.Body))
+            throw Errors.BadRequest("Body is required.", "post.body_required");
+
+
         var post = Post.CreateNew(
             type: request.Type,
             title: request.Title,
@@ -145,7 +152,7 @@ public sealed class PostService(IPostRepository postRepository) : IPostService
         return new PostResponse
         {
             Id = post.Id,
-            Type = post.Type.ToString(),
+            Type = post.Type,
             Title = post.Title,
             Body = post.Body,
             Tags = post.Tags.ToList(),

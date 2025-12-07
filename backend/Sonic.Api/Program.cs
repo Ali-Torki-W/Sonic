@@ -140,6 +140,11 @@ app.MapGet("/auth-test", (HttpContext httpContext) =>
     });
 }).RequireAuthorization();
 
+app.MapGet("/dev/boom", () =>
+{
+    throw new Exception("This is a test exception with some internal detail.");
+}).AllowAnonymous();
+
 // ---------- DEV-ONLY: test token endpoint (you can delete this later) ----------
 app.MapPost("/dev/token", (IJwtTokenGenerator tokenGenerator) =>
 {
