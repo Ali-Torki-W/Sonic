@@ -10,7 +10,7 @@ namespace Sonic.Api.Controllers;
 
 [ApiController]
 [Route("posts")]
-public class PostController(IPostService postService) : ControllerBase
+public class PostController(IPostService postService) : ApiControllerBase
 {
     private readonly IPostService _postService = postService;
 

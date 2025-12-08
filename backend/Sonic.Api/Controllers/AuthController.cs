@@ -10,7 +10,7 @@ namespace Sonic.Api.Controllers;
 
 [ApiController]
 [Route("auth")]
-public sealed class AuthController(IAuthService authService) : ControllerBase
+public sealed class AuthController(IAuthService authService) : ApiControllerBase
 {
     private readonly IAuthService _authService = authService;
 

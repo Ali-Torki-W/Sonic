@@ -1,16 +1,20 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Bson;
 using Sonic.Api.MiddleWares;
 using Sonic.Application.Auth.interfaces;
 using Sonic.Application.Auth.Services;
+using Sonic.Application.Comments.interfaces;
+using Sonic.Application.Comments.Services;
 using Sonic.Application.Posts.interfaces;
 using Sonic.Application.Posts.Services;
 using Sonic.Application.Users;
-using Sonic.Domain.Users;
 using Sonic.Infrastructure.Auth;
+using Sonic.Infrastructure.Comments;
 using Sonic.Infrastructure.Config;
 using Sonic.Infrastructure.Posts;
 using Sonic.Infrastructure.Users;
@@ -36,8 +40,21 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPostRepository, PostRepository>();
 builder.Services.AddScoped<IPostService, PostService>();
 
-// ---------- MVC / controllers ----------
-builder.Services.AddControllers();
+builder.Services.AddScoped<ICommentRepository, CommentRepository>();
+builder.Services.AddScoped<ICommentService, CommentService>();
+
+// ---------- Error handling middleware ----------
+builder.Services.AddTransient<ErrorHandlingMiddleware>();
+
+// ---------- MVC / controllers + JSON ----------
+builder.Services
+    .AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    });
 
 // ---------- Authentication / Authorization ----------
 builder.Services
@@ -71,7 +88,7 @@ builder.Services
             ClockSkew = TimeSpan.FromMinutes(1)
         };
 
-        // Keep JWT claim names as-is ("sub", "email", "role", ...)
+        // Keep JWT claim names exact ("sub", "email", "role", ...)
         options.MapInboundClaims = false;
         JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
     });
@@ -82,15 +99,11 @@ builder.Services.AddAuthorization(options =>
         policy.RequireRole("Admin"));
 });
 
-// ---------- ErrorHandling ----------
-builder.Services.AddTransient<ErrorHandlingMiddleware>();
-
 var app = builder.Build();
 
 // ---------- Pipeline ----------
 app.UseRouting();
 
-// Global error handling
 app.UseMiddleware<ErrorHandlingMiddleware>();
 
 app.UseAuthentication();
@@ -115,7 +128,7 @@ app.MapGet("/db-health", async (MongoDbContext dbContext) =>
     }
 }).AllowAnonymous();
 
-// ---------- Dummy protected endpoint to test JWT ----------
+// ---------- JWT test endpoint ----------
 app.MapGet("/auth-test", (HttpContext httpContext) =>
 {
     var user = httpContext.User;
@@ -140,19 +153,14 @@ app.MapGet("/auth-test", (HttpContext httpContext) =>
     });
 }).RequireAuthorization();
 
-app.MapGet("/dev/boom", () =>
-{
-    throw new Exception("This is a test exception with some internal detail.");
-}).AllowAnonymous();
-
-// ---------- DEV-ONLY: test token endpoint (you can delete this later) ----------
+// ---------- DEV: token generator endpoint ----------
 app.MapPost("/dev/token", (IJwtTokenGenerator tokenGenerator) =>
 {
-    var user = User.CreateNew(
+    var user = Sonic.Domain.Users.User.CreateNew(
         email: "devuser@sonic.local",
         passwordHash: "ignored-in-this-endpoint",
         displayName: "Dev User",
-        role: UserRole.Admin);
+        role: Sonic.Domain.Users.UserRole.Admin);
 
     var token = tokenGenerator.GenerateToken(user);
 
