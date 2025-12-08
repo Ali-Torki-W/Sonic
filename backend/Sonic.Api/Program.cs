@@ -5,50 +5,16 @@ using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Bson;
-using MongoDB.Driver;
+using Sonic.Api.DependencyInjection;
 using Sonic.Api.MiddleWares;
 using Sonic.Application.Auth.interfaces;
-using Sonic.Application.Auth.Services;
-using Sonic.Application.Comments.interfaces;
-using Sonic.Application.Comments.Services;
-using Sonic.Application.Likes.interfaces;
-using Sonic.Application.Likes.Services;
-using Sonic.Application.Posts.interfaces;
-using Sonic.Application.Posts.Services;
-using Sonic.Application.Users.interfaces;
 using Sonic.Infrastructure.Auth;
-using Sonic.Infrastructure.Comments;
 using Sonic.Infrastructure.Config;
-using Sonic.Infrastructure.Likes;
-using Sonic.Infrastructure.Posts;
-using Sonic.Infrastructure.Users;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ---------- Options binding ----------
-builder.Services.Configure<JwtOptions>(
-    builder.Configuration.GetSection(JwtOptions.SectionName));
-
-builder.Services.Configure<MongoDbSettings>(
-    builder.Configuration.GetSection("MongoDbSettings"));
-
-// ---------- Core infrastructure ----------
-builder.Services.AddSingleton<MongoDbContext>();
-builder.Services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
-builder.Services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
-
-// ---------- Application services / repositories ----------
-builder.Services.AddScoped<IUserRepository, UserRepository>();
-builder.Services.AddScoped<IAuthService, AuthService>();
-
-builder.Services.AddScoped<IPostRepository, PostRepository>();
-builder.Services.AddScoped<IPostService, PostService>();
-
-builder.Services.AddScoped<ICommentRepository, CommentRepository>();
-builder.Services.AddScoped<ICommentService, CommentService>();
-
-builder.Services.AddScoped<ILikeRepository, LikeRepository>();
-builder.Services.AddScoped<ILikeService, LikeService>();
+// ---------- Sonic core DI (Application + Infrastructure + options) ----------
+builder.Services.AddSonicCore(builder.Configuration);
 
 // ---------- Error handling middleware ----------
 builder.Services.AddTransient<ErrorHandlingMiddleware>();
@@ -95,6 +61,7 @@ builder.Services
             ClockSkew = TimeSpan.FromMinutes(1)
         };
 
+        // Keep JWT claim names exact ("sub", "email", "role", ...)
         options.MapInboundClaims = false;
         JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
     });
