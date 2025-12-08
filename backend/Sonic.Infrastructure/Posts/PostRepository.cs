@@ -63,7 +63,7 @@ public sealed class PostRepository : IPostRepository
             cancellationToken: cancellationToken);
     }
 
-    public async Task<PagedResult<Post>> QueryAsync(
+    public async Task<PagedResult<Post>> QueryAsync( // Searcher and Paginator
         int page,
         int pageSize,
         PostType? type = null,
@@ -125,7 +125,7 @@ public sealed class PostRepository : IPostRepository
         };
     }
 
-    // ---------- Mapping ----------
+    // ---------- Mapping(Mappers) ----------
 
     private static Post ToDomain(PostDocument doc)
     {
