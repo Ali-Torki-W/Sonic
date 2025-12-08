@@ -1,14 +1,18 @@
 using Sonic.Application.Common.Errors;
 using Sonic.Application.Common.Pagination;
+using Sonic.Application.Likes.interfaces;
 using Sonic.Application.Posts.DTOs;
 using Sonic.Application.Posts.interfaces;
 using Sonic.Domain.Posts;
 
 namespace Sonic.Application.Posts.Services;
 
-public sealed class PostService(IPostRepository postRepository) : IPostService
+public sealed class PostService(
+    IPostRepository postRepository,
+    ILikeRepository likeRepository) : IPostService
 {
     private readonly IPostRepository _postRepository = postRepository;
+    private readonly ILikeRepository _likeRepository = likeRepository;
 
     public async Task<PostResponse> CreatePostAsync(
         CreatePostRequest request,
@@ -16,15 +20,15 @@ public sealed class PostService(IPostRepository postRepository) : IPostService
         CancellationToken cancellationToken = default)
     {
         if (request is null) throw new ArgumentNullException(nameof(request));
+
         if (string.IsNullOrWhiteSpace(authorId))
-            throw Errors.BadRequest("AuthorId is required.", "post.author_required");
+            throw Errors.BadRequest("Author id is required.", "post.author_id_required");
 
         if (string.IsNullOrWhiteSpace(request.Title))
             throw Errors.BadRequest("Title is required.", "post.title_required");
 
         if (string.IsNullOrWhiteSpace(request.Body))
             throw Errors.BadRequest("Body is required.", "post.body_required");
-
 
         var post = Post.CreateNew(
             type: request.Type,
@@ -36,7 +40,8 @@ public sealed class PostService(IPostRepository postRepository) : IPostService
 
         await _postRepository.InsertAsync(post, cancellationToken);
 
-        return ToResponse(post);
+        // New post: like count = 0
+        return ToResponse(post, likeCount: 0);
     }
 
     public async Task<PostResponse> GetPostByIdAsync(
@@ -48,11 +53,11 @@ public sealed class PostService(IPostRepository postRepository) : IPostService
 
         var post = await _postRepository.GetByIdAsync(id, cancellationToken);
         if (post is null)
-        {
             throw Errors.NotFound("Post not found.", "post.not_found");
-        }
 
-        return ToResponse(post);
+        var likeCount = await _likeRepository.CountForPostAsync(id, cancellationToken);
+
+        return ToResponse(post, likeCount);
     }
 
     public async Task<PostResponse> UpdatePostAsync(
@@ -63,21 +68,19 @@ public sealed class PostService(IPostRepository postRepository) : IPostService
         CancellationToken cancellationToken = default)
     {
         if (request is null) throw new ArgumentNullException(nameof(request));
+
         if (string.IsNullOrWhiteSpace(id))
             throw Errors.BadRequest("Post id is required.", "post.id_required");
+
         if (string.IsNullOrWhiteSpace(currentUserId))
             throw Errors.BadRequest("Current user id is required.", "post.current_user_required");
 
         var post = await _postRepository.GetByIdAsync(id, cancellationToken);
         if (post is null)
-        {
             throw Errors.NotFound("Post not found.", "post.not_found");
-        }
 
         if (!isAdmin && !string.Equals(post.AuthorId, currentUserId, StringComparison.Ordinal))
-        {
             throw Errors.Forbidden("You are not allowed to update this post.", "post.forbidden_update");
-        }
 
         post.UpdateContent(
             title: request.Title,
@@ -87,7 +90,9 @@ public sealed class PostService(IPostRepository postRepository) : IPostService
 
         await _postRepository.UpdateAsync(post, cancellationToken);
 
-        return ToResponse(post);
+        var likeCount = await _likeRepository.CountForPostAsync(id, cancellationToken);
+
+        return ToResponse(post, likeCount);
     }
 
     public async Task DeletePostAsync(
@@ -98,23 +103,20 @@ public sealed class PostService(IPostRepository postRepository) : IPostService
     {
         if (string.IsNullOrWhiteSpace(id))
             throw Errors.BadRequest("Post id is required.", "post.id_required");
+
         if (string.IsNullOrWhiteSpace(currentUserId))
             throw Errors.BadRequest("Current user id is required.", "post.current_user_required");
 
         var post = await _postRepository.GetByIdAsync(id, cancellationToken);
         if (post is null)
-        {
             throw Errors.NotFound("Post not found.", "post.not_found");
-        }
 
         if (!isAdmin && !string.Equals(post.AuthorId, currentUserId, StringComparison.Ordinal))
-        {
             throw Errors.Forbidden("You are not allowed to delete this post.", "post.forbidden_delete");
-        }
 
         post.MarkDeleted();
-
         await _postRepository.UpdateAsync(post, cancellationToken);
+        // We are not deleting likes here; they simply become irrelevant because post is gone.
     }
 
     public async Task<PagedResult<PostResponse>> GetFeedAsync(
@@ -126,8 +128,6 @@ public sealed class PostService(IPostRepository postRepository) : IPostService
         bool? featured = null,
         CancellationToken cancellationToken = default)
     {
-        // Repository normalizes page/pageSize (page<1 =>1, pageSize<=0=>10),
-        // so we don't need to throw 400 here unless you want strict behavior.
         var result = await _postRepository.QueryAsync(
             page: page,
             pageSize: pageSize,
@@ -137,17 +137,45 @@ public sealed class PostService(IPostRepository postRepository) : IPostService
             featured: featured,
             cancellationToken: cancellationToken);
 
+        if (result.TotalItems == 0)
+        {
+            return new PagedResult<PostResponse>
+            {
+                Items = Array.Empty<PostResponse>(),
+                Page = result.Page,
+                PageSize = result.PageSize,
+                TotalItems = 0
+            };
+        }
+
+        var posts = result.Items.ToList();
+
+        var likeCounts = new Dictionary<string, long>(StringComparer.Ordinal);
+
+        foreach (var post in posts)
+        {
+            var count = await _likeRepository.CountForPostAsync(post.Id, cancellationToken);
+            likeCounts[post.Id] = count;
+        }
+
+        var responses = posts
+            .Select(p =>
+            {
+                likeCounts.TryGetValue(p.Id, out var count);
+                return ToResponse(p, count);
+            })
+            .ToList();
+
         return new PagedResult<PostResponse>
         {
+            Items = responses,
             Page = result.Page,
             PageSize = result.PageSize,
-            TotalItems = result.TotalItems,
-            Items = result.Items.Select(ToResponse).ToList()
+            TotalItems = result.TotalItems
         };
     }
 
-
-    private static PostResponse ToResponse(Post post)
+    private static PostResponse ToResponse(Post post, long likeCount)
     {
         return new PostResponse
         {
@@ -160,7 +188,8 @@ public sealed class PostService(IPostRepository postRepository) : IPostService
             AuthorId = post.AuthorId,
             CreatedAt = post.CreatedAt,
             UpdatedAt = post.UpdatedAt,
-            IsFeatured = post.IsFeatured
+            IsFeatured = post.IsFeatured,
+            LikeCount = likeCount
         };
     }
 }

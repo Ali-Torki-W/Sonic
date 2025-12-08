@@ -1,7 +1,7 @@
 using Sonic.Application.Auth.DTOs;
 using Sonic.Application.Auth.interfaces;
 using Sonic.Application.Common.Errors;
-using Sonic.Application.Users;
+using Sonic.Application.Users.interfaces;
 using Sonic.Domain.Users;
 
 namespace Sonic.Application.Auth.Services;

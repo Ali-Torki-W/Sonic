@@ -1,10 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using MongoDB.Driver;
-using Sonic.Application.Users;
+using Sonic.Application.Users.interfaces;
 using Sonic.Domain.Users;
 using Sonic.Infrastructure.Config;
 

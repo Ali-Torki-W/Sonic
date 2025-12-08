@@ -4,6 +4,7 @@ using Sonic.Application.Common.Errors;
 using Sonic.Application.Common.Pagination;
 using Sonic.Application.Posts.interfaces;
 using Sonic.Application.Users;
+using Sonic.Application.Users.interfaces;
 using Sonic.Domain.Comments;
 
 namespace Sonic.Application.Comments.Services;

@@ -22,4 +22,5 @@ public sealed class PostResponse
     public DateTime UpdatedAt { get; set; }
 
     public bool IsFeatured { get; set; }
+    public long LikeCount { get; set; }
 }

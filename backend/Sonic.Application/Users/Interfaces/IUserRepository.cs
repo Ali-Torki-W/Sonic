@@ -1,6 +1,6 @@
 using Sonic.Domain.Users;
 
-namespace Sonic.Application.Users;
+namespace Sonic.Application.Users.interfaces;
 
 public interface IUserRepository
 {
