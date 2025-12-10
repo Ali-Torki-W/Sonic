@@ -22,5 +22,10 @@ public sealed class PostResponse
     public DateTime UpdatedAt { get; set; }
 
     public bool IsFeatured { get; set; }
+
     public long LikeCount { get; set; }
+
+    public string? CampaignGoal { get; set; }
+
+    public long ParticipantsCount { get; set; }
 }

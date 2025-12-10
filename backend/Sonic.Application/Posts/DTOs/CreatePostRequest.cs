@@ -13,4 +13,6 @@ public sealed class CreatePostRequest
     public List<string> Tags { get; set; } = new();
 
     public string? ExternalLink { get; set; }
+
+    public string? CampaignGoal { get; set; }
 }

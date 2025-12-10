@@ -61,7 +61,6 @@ builder.Services
             ClockSkew = TimeSpan.FromMinutes(1)
         };
 
-        // Keep JWT claim names exact ("sub", "email", "role", ...)
         options.MapInboundClaims = false;
         JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Clear();
     });

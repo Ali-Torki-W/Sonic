@@ -140,6 +140,7 @@ public sealed class PostRepository : IPostRepository
             updatedAt: doc.UpdatedAt,
             tags: doc.Tags,
             externalLink: doc.ExternalLink,
+            campaignGoal: doc.CampaignGoal,
             isDeleted: doc.IsDeleted,
             isFeatured: doc.IsFeatured);
     }
@@ -158,7 +159,8 @@ public sealed class PostRepository : IPostRepository
             CreatedAt = post.CreatedAt,
             UpdatedAt = post.UpdatedAt,
             IsDeleted = post.IsDeleted,
-            IsFeatured = post.IsFeatured
+            IsFeatured = post.IsFeatured,
+            CampaignGoal = post.CampaignGoal
         };
     }
 }

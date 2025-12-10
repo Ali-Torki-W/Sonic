@@ -16,6 +16,9 @@ public sealed class Post
     public string? ExternalLink { get; private set; }
     public string AuthorId { get; }
 
+    // NEW: only meaningful when Type == Campaign
+    public string? CampaignGoal { get; private set; }
+
     public DateTime CreatedAt { get; }
     public DateTime UpdatedAt { get; private set; }
 
@@ -33,6 +36,7 @@ public sealed class Post
         DateTime updatedAt,
         IEnumerable<string>? tags,
         string? externalLink,
+        string? campaignGoal,
         bool isDeleted,
         bool isFeatured)
     {
@@ -46,6 +50,10 @@ public sealed class Post
         IsDeleted = isDeleted;
         IsFeatured = isFeatured;
         ExternalLink = externalLink;
+
+        CampaignGoal = string.IsNullOrWhiteSpace(campaignGoal)
+            ? null
+            : campaignGoal.Trim();
 
         if (tags is not null)
         {
@@ -62,7 +70,8 @@ public sealed class Post
         string body,
         string authorId,
         IEnumerable<string>? tags = null,
-        string? externalLink = null)
+        string? externalLink = null,
+        string? campaignGoal = null)
     {
         if (string.IsNullOrWhiteSpace(authorId))
         {
@@ -71,6 +80,11 @@ public sealed class Post
 
         var now = DateTime.UtcNow;
         var id = Guid.NewGuid().ToString("N");
+
+        // Only allow goal for Campaign posts; ignore it for others
+        var normalizedGoal = type == PostType.Campaign
+            ? (string.IsNullOrWhiteSpace(campaignGoal) ? null : campaignGoal.Trim())
+            : null;
 
         return new Post(
             id: id,
@@ -82,6 +96,7 @@ public sealed class Post
             updatedAt: now,
             tags: tags,
             externalLink: externalLink,
+            campaignGoal: normalizedGoal,
             isDeleted: false,
             isFeatured: false);
     }
@@ -97,6 +112,7 @@ public sealed class Post
         DateTime updatedAt,
         IEnumerable<string>? tags,
         string? externalLink,
+        string? campaignGoal,
         bool isDeleted,
         bool isFeatured)
     {
@@ -110,6 +126,7 @@ public sealed class Post
             updatedAt: updatedAt,
             tags: tags,
             externalLink: externalLink,
+            campaignGoal: campaignGoal,
             isDeleted: isDeleted,
             isFeatured: isFeatured);
     }
@@ -118,7 +135,8 @@ public sealed class Post
         string title,
         string body,
         IEnumerable<string>? tags,
-        string? externalLink)
+        string? externalLink,
+        string? campaignGoal = null)
     {
         if (IsDeleted)
         {
@@ -137,6 +155,10 @@ public sealed class Post
         ExternalLink = string.IsNullOrWhiteSpace(externalLink)
             ? null
             : externalLink.Trim();
+
+        CampaignGoal = Type == PostType.Campaign
+            ? (string.IsNullOrWhiteSpace(campaignGoal) ? null : campaignGoal.Trim())
+            : null;
 
         UpdatedAt = DateTime.UtcNow;
 
@@ -190,14 +212,13 @@ public sealed class Post
             ExternalLink = ExternalLink.Trim();
         }
 
-        // Optional stricter rule: external link only meaningful for Course/News.
-        // For MVP we *allow* it on any type to stay flexible.
-        // If you want to be strict later:
-        // if (ExternalLink is not null &&
-        //     Type is not PostType.Course and not PostType.News)
-        // {
-        //     throw new InvalidOperationException("External link is only valid for Course or News posts.");
-        // }
+        // If not a Campaign, do not keep any goal
+        if (Type != PostType.Campaign)
+        {
+            CampaignGoal = null;
+        }
+
+        // You *could* add extra constraints for campaign goal later (length, etc.)
     }
 
     private static IEnumerable<string> NormalizeTags(IEnumerable<string> tags)

@@ -15,4 +15,5 @@ internal sealed class PostDocument
     public DateTime UpdatedAt { get; set; }
     public bool IsDeleted { get; set; }
     public bool IsFeatured { get; set; }
+    public string? CampaignGoal { get; set; }
 }

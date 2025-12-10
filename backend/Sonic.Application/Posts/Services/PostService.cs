@@ -1,3 +1,4 @@
+using Sonic.Application.Campaigns.interfaces;
 using Sonic.Application.Common.Errors;
 using Sonic.Application.Common.Pagination;
 using Sonic.Application.Likes.interfaces;
@@ -9,10 +10,12 @@ namespace Sonic.Application.Posts.Services;
 
 public sealed class PostService(
     IPostRepository postRepository,
-    ILikeRepository likeRepository) : IPostService
+    ILikeRepository likeRepository,
+    ICampaignParticipationRepository campaignParticipationRepository) : IPostService
 {
     private readonly IPostRepository _postRepository = postRepository;
     private readonly ILikeRepository _likeRepository = likeRepository;
+    private readonly ICampaignParticipationRepository _campaignParticipationRepository = campaignParticipationRepository;
 
     public async Task<PostResponse> CreatePostAsync(
         CreatePostRequest request,
@@ -30,18 +33,19 @@ public sealed class PostService(
         if (string.IsNullOrWhiteSpace(request.Body))
             throw Errors.BadRequest("Body is required.", "post.body_required");
 
-        var post = Post.CreateNew(
+        var post = Domain.Posts.Post.CreateNew(
             type: request.Type,
             title: request.Title,
             body: request.Body,
             authorId: authorId,
             tags: request.Tags,
-            externalLink: request.ExternalLink);
+            externalLink: request.ExternalLink,
+            campaignGoal: request.CampaignGoal);
 
         await _postRepository.InsertAsync(post, cancellationToken);
 
-        // New post: like count = 0
-        return ToResponse(post, likeCount: 0);
+        // New post: likes and participants start at 0
+        return ToResponse(post, likeCount: 0, participantsCount: 0);
     }
 
     public async Task<PostResponse> GetPostByIdAsync(
@@ -57,7 +61,13 @@ public sealed class PostService(
 
         var likeCount = await _likeRepository.CountForPostAsync(id, cancellationToken);
 
-        return ToResponse(post, likeCount);
+        long participantsCount = 0;
+        if (post.Type == PostType.Campaign)
+        {
+            participantsCount = await _campaignParticipationRepository.CountForPostAsync(id, cancellationToken);
+        }
+
+        return ToResponse(post, likeCount, participantsCount);
     }
 
     public async Task<PostResponse> UpdatePostAsync(
@@ -86,13 +96,20 @@ public sealed class PostService(
             title: request.Title,
             body: request.Body,
             tags: request.Tags,
-            externalLink: request.ExternalLink);
+            externalLink: request.ExternalLink,
+            campaignGoal: request.CampaignGoal);
 
         await _postRepository.UpdateAsync(post, cancellationToken);
 
         var likeCount = await _likeRepository.CountForPostAsync(id, cancellationToken);
 
-        return ToResponse(post, likeCount);
+        long participantsCount = 0;
+        if (post.Type == PostType.Campaign)
+        {
+            participantsCount = await _campaignParticipationRepository.CountForPostAsync(id, cancellationToken);
+        }
+
+        return ToResponse(post, likeCount, participantsCount);
     }
 
     public async Task DeletePostAsync(
@@ -116,7 +133,7 @@ public sealed class PostService(
 
         post.MarkDeleted();
         await _postRepository.UpdateAsync(post, cancellationToken);
-        // We are not deleting likes here; they simply become irrelevant because post is gone.
+        // We keep likes and participations; post is no longer visible in normal queries.
     }
 
     public async Task<PagedResult<PostResponse>> GetFeedAsync(
@@ -148,23 +165,20 @@ public sealed class PostService(
             };
         }
 
-        var posts = result.Items.ToList();
+        var responses = new List<PostResponse>(result.Items.Count);
 
-        var likeCounts = new Dictionary<string, long>(StringComparer.Ordinal);
-
-        foreach (var post in posts)
+        foreach (var post in result.Items)
         {
-            var count = await _likeRepository.CountForPostAsync(post.Id, cancellationToken);
-            likeCounts[post.Id] = count;
-        }
+            var likeCount = await _likeRepository.CountForPostAsync(post.Id, cancellationToken);
 
-        var responses = posts
-            .Select(p =>
+            long participantsCount = 0;
+            if (post.Type == PostType.Campaign)
             {
-                likeCounts.TryGetValue(p.Id, out var count);
-                return ToResponse(p, count);
-            })
-            .ToList();
+                participantsCount = await _campaignParticipationRepository.CountForPostAsync(post.Id, cancellationToken);
+            }
+
+            responses.Add(ToResponse(post, likeCount, participantsCount));
+        }
 
         return new PagedResult<PostResponse>
         {
@@ -175,7 +189,10 @@ public sealed class PostService(
         };
     }
 
-    private static PostResponse ToResponse(Post post, long likeCount)
+    private static PostResponse ToResponse(
+        Domain.Posts.Post post,
+        long likeCount,
+        long participantsCount)
     {
         return new PostResponse
         {
@@ -189,7 +206,9 @@ public sealed class PostService(
             CreatedAt = post.CreatedAt,
             UpdatedAt = post.UpdatedAt,
             IsFeatured = post.IsFeatured,
-            LikeCount = likeCount
+            LikeCount = likeCount,
+            CampaignGoal = post.CampaignGoal,
+            ParticipantsCount = participantsCount
         };
     }
 }
