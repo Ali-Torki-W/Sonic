@@ -2,11 +2,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sonic.Api.Helpers;
 using Sonic.Application.Auth;
 using Sonic.Application.Auth.DTOs;
 using Sonic.Application.Auth.interfaces;
 
-namespace Sonic.Api.Controllers;
+namespace Sonic.Api.Auth;
 
 [ApiController]
 [Route("auth")]

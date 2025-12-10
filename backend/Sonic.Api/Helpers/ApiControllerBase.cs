@@ -3,7 +3,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Sonic.Application.Common.Errors;
 
-namespace Sonic.Api.Controllers;
+namespace Sonic.Api.Helpers;
 
 public abstract class ApiControllerBase : ControllerBase
 {

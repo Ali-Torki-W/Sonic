@@ -2,6 +2,7 @@ using MongoDB.Driver;
 using Sonic.Application.Users.interfaces;
 using Sonic.Domain.Users;
 using Sonic.Infrastructure.Config;
+using Sonic.Infrastructure.Persistence.Documents;
 
 namespace Sonic.Infrastructure.Users;
 
@@ -88,23 +89,5 @@ public sealed class UserRepository(MongoDbContext dbContext) : IUserRepository
             CreatedAt = user.CreatedAt,
             UpdatedAt = user.UpdatedAt
         };
-    }
-
-    private sealed class UserDocument
-    {
-        public string Id { get; set; } = default!;
-        public string Email { get; set; } = string.Empty;
-        public string PasswordHash { get; set; } = string.Empty;
-        public string DisplayName { get; set; } = string.Empty;
-
-        public string? Bio { get; set; }
-        public string? JobRole { get; set; }
-        public List<string> Interests { get; set; } = new();
-        public string? AvatarUrl { get; set; }
-
-        public string Role { get; set; } = UserRole.User.ToString();
-
-        public DateTime CreatedAt { get; set; }
-        public DateTime UpdatedAt { get; set; }
     }
 }

@@ -3,6 +3,7 @@ using Sonic.Application.Comments.interfaces;
 using Sonic.Application.Common.Pagination;
 using Sonic.Domain.Comments;
 using Sonic.Infrastructure.Config;
+using Sonic.Infrastructure.Persistence.Documents;
 
 namespace Sonic.Infrastructure.Comments;
 
@@ -145,17 +146,5 @@ public sealed class CommentRepository : ICommentRepository
             UpdatedAt = comment.UpdatedAt,
             IsDeleted = comment.IsDeleted
         };
-    }
-
-    // Internal Mongo doc type
-    private sealed class CommentDocument
-    {
-        public string Id { get; set; } = default!;
-        public string PostId { get; set; } = default!;
-        public string AuthorId { get; set; } = default!;
-        public string Body { get; set; } = string.Empty;
-        public DateTime CreatedAt { get; set; }
-        public DateTime? UpdatedAt { get; set; }
-        public bool IsDeleted { get; set; }
     }
 }

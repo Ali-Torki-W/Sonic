@@ -1,10 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sonic.Api.Helpers;
 using Sonic.Application.Comments.DTOs;
 using Sonic.Application.Comments.interfaces;
 using Sonic.Application.Common.Pagination;
 
-namespace Sonic.Api.Controllers;
+namespace Sonic.Api.Comments;
 
 [ApiController]
 public sealed class CommentsController(ICommentService commentService) : ApiControllerBase

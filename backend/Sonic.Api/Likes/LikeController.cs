@@ -1,9 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sonic.Api.Helpers;
 using Sonic.Application.Likes.DTOs;
 using Sonic.Application.Likes.interfaces;
 
-namespace Sonic.Api.Controllers;
+namespace Sonic.Api.Likes;
 
 [ApiController]
 public sealed class LikesController(ILikeService likeService) : ApiControllerBase

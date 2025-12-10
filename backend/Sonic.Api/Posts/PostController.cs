@@ -1,12 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Sonic.Api.Helpers;
 using Sonic.Application.Common.Pagination;
 using Sonic.Application.Posts;
 using Sonic.Application.Posts.DTOs;
 using Sonic.Application.Posts.interfaces;
 using Sonic.Domain.Posts;
 
-namespace Sonic.Api.Controllers;
+namespace Sonic.Api.Posts;
 
 [ApiController]
 [Route("posts")]

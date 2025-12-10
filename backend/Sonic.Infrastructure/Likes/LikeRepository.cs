@@ -2,6 +2,7 @@ using MongoDB.Driver;
 using Sonic.Application.Likes.interfaces;
 using Sonic.Domain.Likes;
 using Sonic.Infrastructure.Config;
+using Sonic.Infrastructure.Persistence.Documents;
 
 namespace Sonic.Infrastructure.Likes;
 
@@ -119,14 +120,5 @@ public sealed class LikeRepository : ILikeRepository
             UserId = like.UserId,
             CreatedAt = like.CreatedAt
         };
-    }
-
-    // Internal Mongo document model
-    private sealed class LikeDocument
-    {
-        public string Id { get; set; } = default!;
-        public string PostId { get; set; } = default!;
-        public string UserId { get; set; } = default!;
-        public DateTime CreatedAt { get; set; }
     }
 }
