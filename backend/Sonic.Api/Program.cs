@@ -1,13 +1,14 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 using MongoDB.Bson;
 using Sonic.Api.DependencyInjection;
 using Sonic.Api.MiddleWares;
-using Sonic.Application.Auth.interfaces;
 using Sonic.Infrastructure.Auth;
 using Sonic.Infrastructure.Config;
 
@@ -28,6 +29,48 @@ builder.Services
         options.JsonSerializerOptions.DictionaryKeyPolicy = JsonNamingPolicy.CamelCase;
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
+
+// ---------- Swagger / OpenAPI ----------
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Sonic API",
+        Version = "v1",
+        Description = "Sonic – AI experience sharing platform (MVP)"
+    });
+
+    // IMPORTANT: schemeId must match the reference below.
+    const string schemeId = "bearer";
+
+    options.AddSecurityDefinition(schemeId, new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Description = "JWT Authorization header using the Bearer scheme."
+    });
+
+    // IMPORTANT: v10 uses OpenApiSecuritySchemeReference and expects List<string>
+    options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecuritySchemeReference(schemeId, document),
+            new List<string>()
+        }
+    });
+
+    // Optional: include XML comments if enabled
+    var xmlName = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlName);
+    if (File.Exists(xmlPath))
+    {
+        options.IncludeXmlComments(xmlPath);
+    }
+});
 
 // ---------- Authentication / Authorization ----------
 builder.Services
@@ -60,7 +103,8 @@ builder.Services
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(1),
 
-            RoleClaimType = "role"
+            RoleClaimType = "role",
+            NameClaimType = JwtRegisteredClaimNames.Sub
         };
 
         options.MapInboundClaims = false;
@@ -69,8 +113,7 @@ builder.Services
 
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("AdminOnly", policy =>
-        policy.RequireRole("Admin"));
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
 });
 
 var app = builder.Build();
@@ -83,6 +126,13 @@ app.UseMiddleware<ErrorHandlingMiddleware>();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.UseSwagger();
+app.UseSwaggerUI(c =>
+{
+    c.SwaggerEndpoint("/swagger/v1/swagger.json", "Sonic API v1");
+    c.RoutePrefix = "swagger";
+});
+
 // ---------- Health endpoints ----------
 app.MapGet("/health", () => Results.Ok(new { status = "OK" }))
    .AllowAnonymous();
@@ -93,7 +143,6 @@ app.MapGet("/db-health", async (MongoDbContext dbContext) =>
     {
         var command = new BsonDocument("ping", 1);
         await dbContext.GetDatabase().RunCommandAsync<BsonDocument>(command);
-
         return Results.Ok(new { status = "OK", message = "MongoDB reachable" });
     }
     catch (Exception ex)
@@ -118,35 +167,8 @@ app.MapGet("/auth-test", (HttpContext httpContext) =>
     var role = user.FindFirst("role")?.Value
                ?? user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
 
-    return Results.Ok(new
-    {
-        message = "You are authenticated.",
-        userId,
-        email,
-        role
-    });
+    return Results.Ok(new { message = "You are authenticated.", userId, email, role });
 }).RequireAuthorization();
-
-// ---------- DEV: token generator endpoint ----------
-app.MapPost("/dev/token", (IJwtTokenGenerator tokenGenerator) =>
-{
-    var user = Sonic.Domain.Users.User.CreateNew(
-        email: "devuser@sonic.local",
-        passwordHash: "ignored-in-this-endpoint",
-        displayName: "Dev User",
-        role: Sonic.Domain.Users.UserRole.Admin);
-
-    var token = tokenGenerator.GenerateToken(user);
-
-    return Results.Ok(new
-    {
-        token = token.AccessToken,
-        expiresAtUtc = token.ExpiresAtUtc,
-        userId = user.Id,
-        email = user.Email,
-        role = user.Role.ToString()
-    });
-}).AllowAnonymous();
 
 app.MapControllers();
 
