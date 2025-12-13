@@ -36,4 +36,9 @@ public interface IPostService
         string? search = null,
         bool? featured = null,
         CancellationToken cancellationToken = default);
+
+    Task SetFeaturedStatusAsync(
+       string id,
+       bool isFeatured,
+       CancellationToken cancellationToken = default);
 }

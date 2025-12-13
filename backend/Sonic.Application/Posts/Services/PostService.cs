@@ -189,6 +189,24 @@ public sealed class PostService(
         };
     }
 
+    public async Task SetFeaturedStatusAsync(
+        string id,
+        bool isFeatured,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+            throw Errors.BadRequest("Post id is required.", "post.id_required");
+
+        var post = await _postRepository.GetByIdAsync(id, cancellationToken);
+        if (post is null)
+            throw Errors.NotFound("Post not found.", "post.not_found");
+
+        // Domain rule: can't feature deleted posts (Post.SetFeatured will also guard)
+        post.SetFeatured(isFeatured);
+
+        await _postRepository.UpdateAsync(post, cancellationToken);
+    }
+
     private static PostResponse ToResponse(
         Domain.Posts.Post post,
         long likeCount,

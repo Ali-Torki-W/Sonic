@@ -58,7 +58,9 @@ builder.Services
             IssuerSigningKey = new SymmetricSecurityKey(keyBytes),
 
             ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromMinutes(1)
+            ClockSkew = TimeSpan.FromMinutes(1),
+
+            RoleClaimType = "role"
         };
 
         options.MapInboundClaims = false;
