@@ -8,7 +8,7 @@ using Sonic.Application.Posts.DTOs;
 using Sonic.Application.Posts.interfaces;
 using Sonic.Domain.Posts;
 
-namespace Sonic.Api.Campaign;
+namespace Sonic.Api.Campaigns;
 
 [ApiController]
 public sealed class CampaignsController(

@@ -1,12 +1,10 @@
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Sonic.Api.Helpers;
 using Sonic.Application.Comments.interfaces;
 using Sonic.Application.Posts.interfaces;
 
-namespace Sonic.Api.Controllers;
+namespace Sonic.Api.Admins;
 
 [ApiController]
 [Route("admin")]

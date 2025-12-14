@@ -9,6 +9,7 @@ using Sonic.Application.Likes.Services;
 using Sonic.Application.Posts.interfaces;
 using Sonic.Application.Posts.Services;
 using Sonic.Application.Users.interfaces;
+using Sonic.Application.Users.Services;
 using Sonic.Infrastructure.Auth;
 using Sonic.Infrastructure.Campaigns;
 using Sonic.Infrastructure.Comments;
@@ -52,6 +53,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPostService, PostService>();
         services.AddScoped<ICommentService, CommentService>();
         services.AddScoped<ILikeService, LikeService>();
+        services.AddScoped<IUserService, UserService>();
+
 
         services.AddScoped<ICampaignParticipationRepository, CampaignParticipationRepository>();
         services.AddScoped<ICampaignService, CampaignService>();
