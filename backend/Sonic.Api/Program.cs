@@ -7,15 +7,63 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using MongoDB.Bson;
-using Sonic.Api.DependencyInjection;
+using Sonic.Api.Bootstrap;
+using Sonic.Api.Config;
 using Sonic.Api.MiddleWares;
+using Sonic.Application.Auth.interfaces;
+using Sonic.Application.Auth.Services;
+using Sonic.Application.Campaigns.interfaces;
+using Sonic.Application.Campaigns.Services;
+using Sonic.Application.Comments.interfaces;
+using Sonic.Application.Comments.Services;
+using Sonic.Application.Likes.interfaces;
+using Sonic.Application.Likes.Services;
+using Sonic.Application.Posts.interfaces;
+using Sonic.Application.Posts.Services;
+using Sonic.Application.Users.interfaces;
+using Sonic.Application.Users.Services;
 using Sonic.Infrastructure.Auth;
+using Sonic.Infrastructure.Campaigns;
+using Sonic.Infrastructure.Comments;
 using Sonic.Infrastructure.Config;
+using Sonic.Infrastructure.Likes;
+using Sonic.Infrastructure.Posts;
+using Sonic.Infrastructure.Users;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ---------- Sonic core DI (Application + Infrastructure + options) ----------
-builder.Services.AddSonicCore(builder.Configuration);
+// ---------- Options binding ----------
+builder.Services.Configure<JwtOptions>(
+    builder.Configuration.GetSection(JwtOptions.SectionName));
+
+builder.Services.Configure<MongoDbSettings>(
+    builder.Configuration.GetSection("MongoDbSettings"));
+
+builder.Services.Configure<AdminSeedOptions>(
+    builder.Configuration.GetSection(AdminSeedOptions.SectionName));
+
+// ---------- Core infrastructure ----------
+builder.Services.AddSingleton<MongoDbContext>();
+builder.Services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
+builder.Services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
+
+// ---------- Repositories ----------
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IPostRepository, PostRepository>();
+builder.Services.AddScoped<ICommentRepository, CommentRepository>();
+builder.Services.AddScoped<ILikeRepository, LikeRepository>();
+builder.Services.AddScoped<ICampaignParticipationRepository, CampaignParticipationRepository>();
+
+// ---------- Application services ----------
+builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IPostService, PostService>();
+builder.Services.AddScoped<ICommentService, CommentService>();
+builder.Services.AddScoped<ILikeService, LikeService>();
+builder.Services.AddScoped<ICampaignService, CampaignService>();
+builder.Services.AddScoped<IUserService, UserService>();
+
+// ---------- Hosted bootstrap ----------
+builder.Services.AddHostedService<AdminBootstrapHostedService>();
 
 // ---------- Error handling middleware ----------
 builder.Services.AddTransient<ErrorHandlingMiddleware>();
@@ -41,7 +89,6 @@ builder.Services.AddSwaggerGen(options =>
         Description = "Sonic – AI experience sharing platform (MVP)"
     });
 
-    // IMPORTANT: schemeId must match the reference below.
     const string schemeId = "bearer";
 
     options.AddSecurityDefinition(schemeId, new OpenApiSecurityScheme
@@ -54,16 +101,11 @@ builder.Services.AddSwaggerGen(options =>
         Description = "JWT Authorization header using the Bearer scheme."
     });
 
-    // IMPORTANT: v10 uses OpenApiSecuritySchemeReference and expects List<string>
     options.AddSecurityRequirement(document => new OpenApiSecurityRequirement
     {
-        {
-            new OpenApiSecuritySchemeReference(schemeId, document),
-            new List<string>()
-        }
+        { new OpenApiSecuritySchemeReference(schemeId, document), new List<string>() }
     });
 
-    // Optional: include XML comments if enabled
     var xmlName = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlName);
     if (File.Exists(xmlPath))
@@ -150,25 +192,6 @@ app.MapGet("/db-health", async (MongoDbContext dbContext) =>
         return Results.Problem($"MongoDB health check failed: {ex.Message}");
     }
 }).AllowAnonymous();
-
-// ---------- JWT test endpoint ----------
-app.MapGet("/auth-test", (HttpContext httpContext) =>
-{
-    var user = httpContext.User;
-    if (user?.Identity?.IsAuthenticated != true)
-    {
-        return Results.Unauthorized();
-    }
-
-    var userId = user.FindFirst(JwtRegisteredClaimNames.Sub)?.Value
-                 ?? user.FindFirst("sub")?.Value;
-
-    var email = user.FindFirst(JwtRegisteredClaimNames.Email)?.Value;
-    var role = user.FindFirst("role")?.Value
-               ?? user.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
-
-    return Results.Ok(new { message = "You are authenticated.", userId, email, role });
-}).RequireAuthorization();
 
 app.MapControllers();
 
