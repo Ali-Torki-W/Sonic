@@ -39,7 +39,7 @@ public sealed class CommentRepository : ICommentRepository
         Comment comment,
         CancellationToken cancellationToken = default)
     {
-        if (comment is null) throw new ArgumentNullException(nameof(comment));
+        ArgumentNullException.ThrowIfNull(comment);
 
         var doc = FromDomain(comment);
         await _collection.InsertOneAsync(doc, cancellationToken: cancellationToken);

@@ -16,10 +16,15 @@ public sealed class InMemoryCommentRepository : ICommentRepository
 
     public Task<Comment?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(id)) return Task.FromResult<Comment?>(null);
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return Task.FromResult<Comment?>(null);
+        }
 
         if (_byId.TryGetValue(id, out var c) && !c.IsDeleted)
+        {
             return Task.FromResult<Comment?>(c);
+        }
 
         return Task.FromResult<Comment?>(null);
     }
@@ -41,8 +46,15 @@ public sealed class InMemoryCommentRepository : ICommentRepository
         int pageSize,
         CancellationToken cancellationToken = default)
     {
-        if (page < 1) page = 1;
-        if (pageSize <= 0) pageSize = 10;
+        if (page < 1)
+        {
+            page = 1;
+        }
+
+        if (pageSize <= 0)
+        {
+            pageSize = 10;
+        }
 
         var q = _byId.Values
             .Where(x => !x.IsDeleted && string.Equals(x.PostId, postId, StringComparison.Ordinal))
@@ -62,7 +74,7 @@ public sealed class InMemoryCommentRepository : ICommentRepository
 
     public Task InsertAsync(Comment comment, CancellationToken cancellationToken)
     {
-        if (comment is null) throw new ArgumentNullException(nameof(comment));
+        ArgumentNullException.ThrowIfNull(comment);
 
         _byId[comment.Id] = comment;
         return Task.CompletedTask;

@@ -10,17 +10,25 @@ public sealed class InMemoryUserRepository : IUserRepository
 
     public Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(email)) return Task.FromResult<User?>(null);
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            return Task.FromResult<User?>(null);
+        }
 
         if (_idByEmail.TryGetValue(email.Trim(), out var id) && _byId.TryGetValue(id, out var user))
+        {
             return Task.FromResult<User?>(user);
+        }
 
         return Task.FromResult<User?>(null);
     }
 
     public Task<User?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(id)) return Task.FromResult<User?>(null);
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return Task.FromResult<User?>(null);
+        }
 
         _byId.TryGetValue(id, out var user);
         return Task.FromResult<User?>(user);

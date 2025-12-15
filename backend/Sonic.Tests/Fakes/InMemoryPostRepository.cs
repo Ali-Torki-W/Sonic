@@ -10,10 +10,15 @@ public sealed class InMemoryPostRepository : IPostRepository
 
     public Task<Post?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(id)) return Task.FromResult<Post?>(null);
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return Task.FromResult<Post?>(null);
+        }
 
         if (_posts.TryGetValue(id, out var post) && !post.IsDeleted)
+        {
             return Task.FromResult<Post?>(post);
+        }
 
         return Task.FromResult<Post?>(null);
     }
@@ -49,12 +54,22 @@ public sealed class InMemoryPostRepository : IPostRepository
         bool? featured = null,
         CancellationToken cancellationToken = default)
     {
-        if (page < 1) page = 1;
-        if (pageSize <= 0) pageSize = 10;
+        if (page < 1)
+        {
+            page = 1;
+        }
+
+        if (pageSize <= 0)
+        {
+            pageSize = 10;
+        }
 
         IEnumerable<Post> q = _posts.Values.Where(p => !p.IsDeleted);
 
-        if (type.HasValue) q = q.Where(p => p.Type == type.Value);
+        if (type.HasValue)
+        {
+            q = q.Where(p => p.Type == type.Value);
+        }
 
         if (!string.IsNullOrWhiteSpace(tag))
         {
@@ -70,7 +85,10 @@ public sealed class InMemoryPostRepository : IPostRepository
                 p.Body.Contains(s, StringComparison.OrdinalIgnoreCase));
         }
 
-        if (featured.HasValue) q = q.Where(p => p.IsFeatured == featured.Value);
+        if (featured.HasValue)
+        {
+            q = q.Where(p => p.IsFeatured == featured.Value);
+        }
 
         q = q.OrderByDescending(p => p.CreatedAt);
 

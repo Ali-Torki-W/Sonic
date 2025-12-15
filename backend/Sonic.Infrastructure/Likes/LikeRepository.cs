@@ -56,7 +56,7 @@ public sealed class LikeRepository : ILikeRepository
         Like like,
         CancellationToken cancellationToken = default)
     {
-        if (like is null) throw new ArgumentNullException(nameof(like));
+        ArgumentNullException.ThrowIfNull(like);
 
         var doc = FromDomain(like);
 

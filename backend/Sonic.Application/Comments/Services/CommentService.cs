@@ -24,21 +24,24 @@ public sealed class CommentService(
         CreateCommentRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (request is null) throw new ArgumentNullException(nameof(request));
+        ArgumentNullException.ThrowIfNull(request);
 
         if (string.IsNullOrWhiteSpace(postId))
+        {
             throw Errors.BadRequest("Post id is required.", "comment.post_id_required");
+        }
 
         if (string.IsNullOrWhiteSpace(authorId))
+        {
             throw Errors.BadRequest("Author id is required.", "comment.author_id_required");
+        }
 
         if (string.IsNullOrWhiteSpace(request.Body))
+        {
             throw Errors.BadRequest("Comment body is required.", "comment.body_required");
+        }
 
-        var post = await _postRepository.GetByIdAsync(postId, cancellationToken);
-        if (post is null)
-            throw Errors.NotFound("Post not found.", "post.not_found");
-
+        var post = await _postRepository.GetByIdAsync(postId, cancellationToken) ?? throw Errors.NotFound("Post not found.", "post.not_found");
         var comment = Comment.CreateNew(postId, authorId, request.Body);
 
         await _commentRepository.InsertAsync(comment, cancellationToken);
@@ -56,12 +59,11 @@ public sealed class CommentService(
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(postId))
+        {
             throw Errors.BadRequest("Post id is required.", "comment.post_id_required");
+        }
 
-        var post = await _postRepository.GetByIdAsync(postId, cancellationToken);
-        if (post is null)
-            throw Errors.NotFound("Post not found.", "post.not_found");
-
+        var post = await _postRepository.GetByIdAsync(postId, cancellationToken) ?? throw Errors.NotFound("Post not found.", "post.not_found");
         var result = await _commentRepository.GetByPostIdAsync(
             postId,
             page,
@@ -116,17 +118,20 @@ public sealed class CommentService(
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(commentId))
+        {
             throw Errors.BadRequest("Comment id is required.", "comment.id_required");
+        }
 
         if (string.IsNullOrWhiteSpace(currentUserId))
+        {
             throw Errors.BadRequest("Current user id is required.", "comment.current_user_required");
+        }
 
-        var comment = await _commentRepository.GetByIdAsync(commentId, cancellationToken);
-        if (comment is null)
-            throw Errors.NotFound("Comment not found.", "comment.not_found");
-
+        var comment = await _commentRepository.GetByIdAsync(commentId, cancellationToken) ?? throw Errors.NotFound("Comment not found.", "comment.not_found");
         if (!isAdmin && !string.Equals(comment.AuthorId, currentUserId, StringComparison.Ordinal))
+        {
             throw Errors.Forbidden("You are not allowed to delete this comment.", "comment.forbidden_delete");
+        }
 
         await _commentRepository.SoftDeleteAsync(commentId, cancellationToken);
     }

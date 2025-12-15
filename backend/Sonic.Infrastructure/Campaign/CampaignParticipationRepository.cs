@@ -56,7 +56,7 @@ public sealed class CampaignParticipationRepository : ICampaignParticipationRepo
         CampaignParticipation participation,
         CancellationToken cancellationToken = default)
     {
-        if (participation is null) throw new ArgumentNullException(nameof(participation));
+        ArgumentNullException.ThrowIfNull(participation);
 
         var doc = FromDomain(participation);
 

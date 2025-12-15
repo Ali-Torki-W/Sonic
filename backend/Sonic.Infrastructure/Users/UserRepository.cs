@@ -13,7 +13,9 @@ public sealed class UserRepository(MongoDbContext dbContext) : IUserRepository
     public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(email))
+        {
             return null;
+        }
 
         var normalizedEmail = email.Trim().ToLowerInvariant();
 
@@ -26,7 +28,9 @@ public sealed class UserRepository(MongoDbContext dbContext) : IUserRepository
     public async Task<User?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(id))
+        {
             return null;
+        }
 
         var filter = Builders<UserDocument>.Filter.Eq(x => x.Id, id);
         var doc = await _collection.Find(filter).FirstOrDefaultAsync(cancellationToken);
@@ -36,7 +40,7 @@ public sealed class UserRepository(MongoDbContext dbContext) : IUserRepository
 
     public async Task InsertAsync(User user, CancellationToken cancellationToken = default)
     {
-        if (user is null) throw new ArgumentNullException(nameof(user));
+        ArgumentNullException.ThrowIfNull(user);
 
         var doc = FromDomain(user);
         await _collection.InsertOneAsync(doc, cancellationToken: cancellationToken);
@@ -44,7 +48,7 @@ public sealed class UserRepository(MongoDbContext dbContext) : IUserRepository
 
     public async Task UpdateAsync(User user, CancellationToken cancellationToken = default)
     {
-        if (user is null) throw new ArgumentNullException(nameof(user));
+        ArgumentNullException.ThrowIfNull(user);
 
         var doc = FromDomain(user);
         var filter = Builders<UserDocument>.Filter.Eq(x => x.Id, user.Id);

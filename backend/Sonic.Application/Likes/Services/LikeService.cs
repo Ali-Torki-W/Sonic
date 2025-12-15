@@ -19,15 +19,17 @@ public sealed class LikeService(
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(postId))
+        {
             throw Errors.BadRequest("Post id is required.", "like.post_id_required");
+        }
 
         if (string.IsNullOrWhiteSpace(userId))
+        {
             throw Errors.BadRequest("User id is required.", "like.user_id_required");
+        }
 
-        var post = await _postRepository.GetByIdAsync(postId, cancellationToken);
-        if (post is null)
-            throw Errors.NotFound("Post not found.", "post.not_found");
-
+        var post = await _postRepository.GetByIdAsync(postId, cancellationToken)
+            ?? throw Errors.NotFound("Post not found.", "post.not_found");
         var exists = await _likeRepository.ExistsAsync(postId, userId, cancellationToken);
 
         bool nowLiked;

@@ -178,12 +178,14 @@ public sealed class User
     }
 
     /// <summary>
-    /// Promote a user to admin. To be used by admin/bootstrapping logic only.
+    /// Promote a user to admin. To be used by admin/bootstrapping logic only. (we'll seed our first admin)
     /// </summary>
     public void PromoteToAdmin()
     {
         if (Role == UserRole.Admin)
+        {
             return;
+        }
 
         Role = UserRole.Admin;
         UpdatedAt = DateTime.UtcNow;
@@ -194,13 +196,17 @@ public sealed class User
     private static string NormalizeEmail(string email)
     {
         if (string.IsNullOrWhiteSpace(email))
+        {
             throw new ArgumentException("Email is required.", nameof(email));
+        }
 
         email = email.Trim();
 
         // Basic sanity check; not full RFC validation, good enough for MVP.
         if (!email.Contains('@') || email.Length > 320)
+        {
             throw new ArgumentException("Email format looks invalid.", nameof(email));
+        }
 
         return email.ToLowerInvariant();
     }
@@ -208,7 +214,9 @@ public sealed class User
     private static string NormalizePasswordHash(string passwordHash)
     {
         if (string.IsNullOrWhiteSpace(passwordHash))
+        {
             throw new ArgumentException("Password hash is required.", nameof(passwordHash));
+        }
 
         return passwordHash.Trim();
     }
@@ -216,12 +224,16 @@ public sealed class User
     private static string NormalizeDisplayName(string displayName)
     {
         if (string.IsNullOrWhiteSpace(displayName))
+        {
             throw new ArgumentException("Display name is required.", nameof(displayName));
+        }
 
         displayName = displayName.Trim();
 
         if (displayName.Length > 100)
+        {
             throw new ArgumentException("Display name is too long (max 100 characters).", nameof(displayName));
+        }
 
         return displayName;
     }
@@ -229,11 +241,15 @@ public sealed class User
     private static string? NormalizeOptionalText(string? value, int maxLength)
     {
         if (string.IsNullOrWhiteSpace(value))
+        {
             return null;
+        }
 
         var normalized = value.Trim();
         if (normalized.Length > maxLength)
+        {
             throw new ArgumentException($"Text is too long (max {maxLength} characters).");
+        }
 
         return normalized;
     }
@@ -241,12 +257,16 @@ public sealed class User
     private static string? NormalizeOptionalUrl(string? url)
     {
         if (string.IsNullOrWhiteSpace(url))
+        {
             return null;
+        }
 
         var trimmed = url.Trim();
 
         if (!Uri.TryCreate(trimmed, UriKind.Absolute, out _))
+        {
             throw new ArgumentException("Avatar URL is not a valid absolute URL.", nameof(url));
+        }
 
         return trimmed;
     }
@@ -263,13 +283,19 @@ public sealed class User
     private void Validate()
     {
         if (string.IsNullOrWhiteSpace(Email))
+        {
             throw new InvalidOperationException("User email is required.");
+        }
 
         if (string.IsNullOrWhiteSpace(PasswordHash))
+        {
             throw new InvalidOperationException("User password hash is required.");
+        }
 
         if (string.IsNullOrWhiteSpace(DisplayName))
+        {
             throw new InvalidOperationException("User display name is required.");
+        }
 
         ValidateProfile();
     }
@@ -277,13 +303,19 @@ public sealed class User
     private void ValidateProfile()
     {
         if (DisplayName.Length > 100)
+        {
             throw new InvalidOperationException("User display name is too long (max 100 characters).");
+        }
 
         if (Bio is not null && Bio.Length > 1000)
+        {
             throw new InvalidOperationException("User bio is too long (max 1000 characters).");
+        }
 
         if (JobRole is not null && JobRole.Length > 200)
+        {
             throw new InvalidOperationException("User job role is too long (max 200 characters).");
+        }
 
         // Interests already normalized; additional checks would be redundant here.
     }

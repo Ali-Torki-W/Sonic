@@ -19,7 +19,9 @@ public sealed class Pbkdf2PasswordHasher : IPasswordHasher
     public string Hash(string password)
     {
         if (string.IsNullOrWhiteSpace(password))
+        {
             throw new ArgumentException("Password is required.", nameof(password));
+        }
 
         var salt = new byte[SaltSize];
         RandomNumberGenerator.Fill(salt);
@@ -40,17 +42,25 @@ public sealed class Pbkdf2PasswordHasher : IPasswordHasher
     public bool Verify(string password, string passwordHash)
     {
         if (string.IsNullOrWhiteSpace(passwordHash))
+        {
             return false;
+        }
 
         var parts = passwordHash.Split(':', 4, StringSplitOptions.None);
         if (parts.Length != 4)
+        {
             return false;
+        }
 
         if (!string.Equals(parts[0], FormatMarker, StringComparison.Ordinal))
+        {
             return false;
+        }
 
         if (!int.TryParse(parts[1], out var iterations) || iterations <= 0)
+        {
             return false;
+        }
 
         byte[] salt;
         byte[] storedKey;

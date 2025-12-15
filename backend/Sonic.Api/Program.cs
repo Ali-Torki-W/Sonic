@@ -8,7 +8,6 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using MongoDB.Bson;
 using Sonic.Api.Bootstrap;
-using Sonic.Api.Config;
 using Sonic.Api.MiddleWares;
 using Sonic.Application.Auth.interfaces;
 using Sonic.Application.Auth.Services;
@@ -32,29 +31,23 @@ using Sonic.Infrastructure.Users;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// ---------- Options binding ----------
-builder.Services.Configure<JwtOptions>(
-    builder.Configuration.GetSection(JwtOptions.SectionName));
+// Options
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection(JwtOptions.SectionName));
+builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection("MongoDbSettings"));
 
-builder.Services.Configure<MongoDbSettings>(
-    builder.Configuration.GetSection("MongoDbSettings"));
-
-builder.Services.Configure<AdminSeedOptions>(
-    builder.Configuration.GetSection(AdminSeedOptions.SectionName));
-
-// ---------- Core infrastructure ----------
+// Infra
 builder.Services.AddSingleton<MongoDbContext>();
 builder.Services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
 builder.Services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
 
-// ---------- Repositories ----------
+// Repos
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IPostRepository, PostRepository>();
 builder.Services.AddScoped<ICommentRepository, CommentRepository>();
 builder.Services.AddScoped<ILikeRepository, LikeRepository>();
 builder.Services.AddScoped<ICampaignParticipationRepository, CampaignParticipationRepository>();
 
-// ---------- Application services ----------
+// Services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPostService, PostService>();
 builder.Services.AddScoped<ICommentService, CommentService>();
@@ -62,13 +55,10 @@ builder.Services.AddScoped<ILikeService, LikeService>();
 builder.Services.AddScoped<ICampaignService, CampaignService>();
 builder.Services.AddScoped<IUserService, UserService>();
 
-// ---------- Hosted bootstrap ----------
-builder.Services.AddHostedService<AdminBootstrapHostedService>();
+// Startup hardening
+builder.Services.AddHostedService<MongoIndexInitializerHostedService>();
 
-// ---------- Error handling middleware ----------
-builder.Services.AddTransient<ErrorHandlingMiddleware>();
-
-// ---------- MVC / controllers + JSON ----------
+// Controllers + JSON
 builder.Services
     .AddControllers()
     .AddJsonOptions(options =>
@@ -78,15 +68,14 @@ builder.Services
         options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
     });
 
-// ---------- Swagger / OpenAPI ----------
+// Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {
     options.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "Sonic API",
-        Version = "v1",
-        Description = "Sonic – AI experience sharing platform (MVP)"
+        Version = "v1"
     });
 
     const string schemeId = "bearer";
@@ -114,19 +103,17 @@ builder.Services.AddSwaggerGen(options =>
     }
 });
 
-// ---------- Authentication / Authorization ----------
+// Auth
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
-        var jwtOptions = builder.Configuration
-            .GetSection(JwtOptions.SectionName)
-            .Get<JwtOptions>()
-            ?? throw new InvalidOperationException("JWT configuration section 'Jwt' is missing or invalid.");
+        var jwtOptions = builder.Configuration.GetSection(JwtOptions.SectionName).Get<JwtOptions>()
+                        ?? throw new InvalidOperationException("JWT config missing.");
 
         if (string.IsNullOrWhiteSpace(jwtOptions.Secret) || jwtOptions.Secret.Length < 32)
         {
-            throw new InvalidOperationException("JWT Secret is not configured or too short (min 32 chars).");
+            throw new InvalidOperationException("JWT Secret is missing/too short (min 32 chars).");
         }
 
         var keyBytes = Encoding.UTF8.GetBytes(jwtOptions.Secret);
@@ -160,9 +147,9 @@ builder.Services.AddAuthorization(options =>
 
 var app = builder.Build();
 
-// ---------- Pipeline ----------
 app.UseRouting();
 
+// Error handling FIRST (after routing)
 app.UseMiddleware<ErrorHandlingMiddleware>();
 
 app.UseAuthentication();
@@ -175,9 +162,7 @@ app.UseSwaggerUI(c =>
     c.RoutePrefix = "swagger";
 });
 
-// ---------- Health endpoints ----------
-app.MapGet("/health", () => Results.Ok(new { status = "OK" }))
-   .AllowAnonymous();
+app.MapGet("/health", () => Results.Ok(new { status = "OK" })).AllowAnonymous();
 
 app.MapGet("/db-health", async (MongoDbContext dbContext) =>
 {

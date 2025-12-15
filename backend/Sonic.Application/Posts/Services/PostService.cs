@@ -22,16 +22,22 @@ public sealed class PostService(
         string authorId,
         CancellationToken cancellationToken = default)
     {
-        if (request is null) throw new ArgumentNullException(nameof(request));
+        ArgumentNullException.ThrowIfNull(request);
 
         if (string.IsNullOrWhiteSpace(authorId))
+        {
             throw Errors.BadRequest("Author id is required.", "post.author_id_required");
+        }
 
         if (string.IsNullOrWhiteSpace(request.Title))
+        {
             throw Errors.BadRequest("Title is required.", "post.title_required");
+        }
 
         if (string.IsNullOrWhiteSpace(request.Body))
+        {
             throw Errors.BadRequest("Body is required.", "post.body_required");
+        }
 
         var post = Domain.Posts.Post.CreateNew(
             type: request.Type,
@@ -53,12 +59,11 @@ public sealed class PostService(
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(id))
+        {
             throw Errors.BadRequest("Post id is required.", "post.id_required");
+        }
 
-        var post = await _postRepository.GetByIdAsync(id, cancellationToken);
-        if (post is null)
-            throw Errors.NotFound("Post not found.", "post.not_found");
-
+        var post = await _postRepository.GetByIdAsync(id, cancellationToken) ?? throw Errors.NotFound("Post not found.", "post.not_found");
         var likeCount = await _likeRepository.CountForPostAsync(id, cancellationToken);
 
         long participantsCount = 0;
@@ -77,20 +82,23 @@ public sealed class PostService(
         bool isAdmin,
         CancellationToken cancellationToken = default)
     {
-        if (request is null) throw new ArgumentNullException(nameof(request));
+        ArgumentNullException.ThrowIfNull(request);
 
         if (string.IsNullOrWhiteSpace(id))
+        {
             throw Errors.BadRequest("Post id is required.", "post.id_required");
+        }
 
         if (string.IsNullOrWhiteSpace(currentUserId))
+        {
             throw Errors.BadRequest("Current user id is required.", "post.current_user_required");
+        }
 
-        var post = await _postRepository.GetByIdAsync(id, cancellationToken);
-        if (post is null)
-            throw Errors.NotFound("Post not found.", "post.not_found");
-
+        var post = await _postRepository.GetByIdAsync(id, cancellationToken) ?? throw Errors.NotFound("Post not found.", "post.not_found");
         if (!isAdmin && !string.Equals(post.AuthorId, currentUserId, StringComparison.Ordinal))
+        {
             throw Errors.Forbidden("You are not allowed to update this post.", "post.forbidden_update");
+        }
 
         post.UpdateContent(
             title: request.Title,
@@ -119,17 +127,20 @@ public sealed class PostService(
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(id))
+        {
             throw Errors.BadRequest("Post id is required.", "post.id_required");
+        }
 
         if (string.IsNullOrWhiteSpace(currentUserId))
+        {
             throw Errors.BadRequest("Current user id is required.", "post.current_user_required");
+        }
 
-        var post = await _postRepository.GetByIdAsync(id, cancellationToken);
-        if (post is null)
-            throw Errors.NotFound("Post not found.", "post.not_found");
-
+        var post = await _postRepository.GetByIdAsync(id, cancellationToken) ?? throw Errors.NotFound("Post not found.", "post.not_found");
         if (!isAdmin && !string.Equals(post.AuthorId, currentUserId, StringComparison.Ordinal))
+        {
             throw Errors.Forbidden("You are not allowed to delete this post.", "post.forbidden_delete");
+        }
 
         post.MarkDeleted();
         await _postRepository.UpdateAsync(post, cancellationToken);
@@ -195,11 +206,11 @@ public sealed class PostService(
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(id))
+        {
             throw Errors.BadRequest("Post id is required.", "post.id_required");
+        }
 
-        var post = await _postRepository.GetByIdAsync(id, cancellationToken);
-        if (post is null)
-            throw Errors.NotFound("Post not found.", "post.not_found");
+        var post = await _postRepository.GetByIdAsync(id, cancellationToken) ?? throw Errors.NotFound("Post not found.", "post.not_found");
 
         // Domain rule: can't feature deleted posts (Post.SetFeatured will also guard)
         post.SetFeatured(isFeatured);

@@ -20,17 +20,20 @@ public sealed class CampaignService(
         CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(postId))
+        {
             throw Errors.BadRequest("Campaign post id is required.", "campaign.post_id_required");
+        }
 
         if (string.IsNullOrWhiteSpace(userId))
+        {
             throw Errors.BadRequest("User id is required.", "campaign.user_id_required");
+        }
 
-        var post = await _postRepository.GetByIdAsync(postId, cancellationToken);
-        if (post is null)
-            throw Errors.NotFound("Campaign not found.", "campaign.not_found");
-
+        var post = await _postRepository.GetByIdAsync(postId, cancellationToken) ?? throw Errors.NotFound("Campaign not found.", "campaign.not_found");
         if (post.Type != PostType.Campaign)
+        {
             throw Errors.BadRequest("Target post is not a campaign.", "campaign.invalid_type");
+        }
 
         var alreadyExists = await _participationRepository.ExistsAsync(postId, userId, cancellationToken);
 

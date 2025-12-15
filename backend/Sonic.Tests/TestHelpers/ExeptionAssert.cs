@@ -12,17 +12,24 @@ public static class ExceptionAssert
         foreach (var name in candidates)
         {
             var prop = ex.GetType().GetProperty(name, BindingFlags.Public | BindingFlags.Instance);
-            if (prop is null) continue;
+            if (prop is null)
+            {
+                continue;
+            }
 
             if (prop.PropertyType == typeof(int))
+            {
                 return (int?)prop.GetValue(ex);
+            }
 
             // Some libs expose HttpStatusCode enum
             if (prop.PropertyType.IsEnum)
             {
                 var value = prop.GetValue(ex);
                 if (value is not null)
+                {
                     return Convert.ToInt32(value);
+                }
             }
         }
 

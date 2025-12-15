@@ -19,16 +19,22 @@ public sealed class AuthService(
         RegisterRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (request is null) throw new ArgumentNullException(nameof(request));
+        ArgumentNullException.ThrowIfNull(request);
 
         if (string.IsNullOrWhiteSpace(request.Email))
+        {
             throw Errors.BadRequest("Email is required.", "auth.email_required");
+        }
 
         if (string.IsNullOrWhiteSpace(request.Password))
+        {
             throw Errors.BadRequest("Password is required.", "auth.password_required");
+        }
 
         if (string.IsNullOrWhiteSpace(request.DisplayName))
+        {
             throw Errors.BadRequest("Display name is required.", "auth.displayname_required");
+        }
 
         var existing = await _userRepository.GetByEmailAsync(request.Email, cancellationToken);
         if (existing is not null)
@@ -64,7 +70,7 @@ public sealed class AuthService(
         LoginRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (request is null) throw new ArgumentNullException(nameof(request));
+        ArgumentNullException.ThrowIfNull(request);
 
         if (string.IsNullOrWhiteSpace(request.Email) ||
             string.IsNullOrWhiteSpace(request.Password))
@@ -72,12 +78,8 @@ public sealed class AuthService(
             throw Errors.BadRequest("Email and password are required.", "auth.missing_credentials");
         }
 
-        var user = await _userRepository.GetByEmailAsync(request.Email, cancellationToken);
-        if (user is null)
-        {
-            // Do not leak if email exists or not
-            throw Errors.Unauthorized("Invalid email or password.", "auth.invalid_credentials");
-        }
+        var user = await _userRepository.GetByEmailAsync(request.Email, cancellationToken)
+            ?? throw Errors.Unauthorized("Invalid email or password.", "auth.invalid_credentials");
 
         var passwordValid = _passwordHasher.Verify(request.Password, user.PasswordHash);
         if (!passwordValid)

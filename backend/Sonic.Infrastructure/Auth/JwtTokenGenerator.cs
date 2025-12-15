@@ -27,7 +27,7 @@ public sealed class JwtTokenGenerator : IJwtTokenGenerator
 
     public AuthToken GenerateToken(User user)
     {
-        if (user is null) throw new ArgumentNullException(nameof(user));
+        ArgumentNullException.ThrowIfNull(user);
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.Secret));
         var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

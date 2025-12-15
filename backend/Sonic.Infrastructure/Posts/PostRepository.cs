@@ -20,7 +20,9 @@ public sealed class PostRepository : IPostRepository
     public async Task<Post?> GetByIdAsync(string id, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(id))
+        {
             return null;
+        }
 
         var filter = Builders<PostDocument>.Filter.And(
             Builders<PostDocument>.Filter.Eq(x => x.Id, id),
@@ -33,7 +35,7 @@ public sealed class PostRepository : IPostRepository
 
     public async Task InsertAsync(Post post, CancellationToken cancellationToken = default)
     {
-        if (post is null) throw new ArgumentNullException(nameof(post));
+        ArgumentNullException.ThrowIfNull(post);
 
         var doc = FromDomain(post);
         await _collection.InsertOneAsync(doc, cancellationToken: cancellationToken);
@@ -41,7 +43,7 @@ public sealed class PostRepository : IPostRepository
 
     public async Task UpdateAsync(Post post, CancellationToken cancellationToken = default)
     {
-        if (post is null) throw new ArgumentNullException(nameof(post));
+        ArgumentNullException.ThrowIfNull(post);
 
         var doc = FromDomain(post);
         var filter = Builders<PostDocument>.Filter.Eq(x => x.Id, post.Id);
@@ -52,7 +54,9 @@ public sealed class PostRepository : IPostRepository
     public async Task SoftDeleteAsync(string id, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(id))
+        {
             return;
+        }
 
         var update = Builders<PostDocument>.Update
             .Set(x => x.IsDeleted, true)
@@ -73,8 +77,15 @@ public sealed class PostRepository : IPostRepository
         bool? featured = null,
         CancellationToken cancellationToken = default)
     {
-        if (page < 1) page = 1;
-        if (pageSize <= 0) pageSize = 10;
+        if (page < 1)
+        {
+            page = 1;
+        }
+
+        if (pageSize <= 0)
+        {
+            pageSize = 10;
+        }
 
         var builder = Builders<PostDocument>.Filter;
         var filter = builder.Eq(x => x.IsDeleted, false);

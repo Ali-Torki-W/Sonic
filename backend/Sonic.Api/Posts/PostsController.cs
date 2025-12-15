@@ -44,12 +44,17 @@ public class PostController(IPostService postService) : ApiControllerBase
         [FromBody] CreatePostRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (request is null) return BadRequest("Invalid request data.");
+        if (request is null)
+        {
+            return BadRequest("Invalid request data.");
+        }
 
         var authorId = User.FindFirst("sub")?.Value;  // Claims-based author ID from JWT
 
         if (string.IsNullOrEmpty(authorId))
+        {
             return Unauthorized("Author is not authenticated.");
+        }
 
         var post = await _postService.CreatePostAsync(request, authorId, cancellationToken);
 
@@ -79,7 +84,9 @@ public class PostController(IPostService postService) : ApiControllerBase
         var post = await _postService.GetPostByIdAsync(id, cancellationToken);
 
         if (post == null)
+        {
             return NotFound("Post not found.");
+        }
 
         var response = new PostResponse
         {
@@ -105,11 +112,16 @@ public class PostController(IPostService postService) : ApiControllerBase
         [FromBody] UpdatePostRequest request,
         CancellationToken cancellationToken = default)
     {
-        if (request is null) return BadRequest("Invalid request data.");
+        if (request is null)
+        {
+            return BadRequest("Invalid request data.");
+        }
 
         var userId = User.FindFirst("sub")?.Value;
         if (string.IsNullOrEmpty(userId))
+        {
             return Unauthorized("You must be logged in.");
+        }
 
         var isAdmin = User.IsInRole("Admin");
 
@@ -140,7 +152,9 @@ public class PostController(IPostService postService) : ApiControllerBase
     {
         var userId = User.FindFirst("sub")?.Value;
         if (string.IsNullOrEmpty(userId))
+        {
             return Unauthorized("You must be logged in.");
+        }
 
         var isAdmin = User.IsInRole("Admin");
 

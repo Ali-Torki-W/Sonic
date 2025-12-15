@@ -28,10 +28,14 @@ public sealed class AdminBootstrapHostedService(
         var displayName = string.IsNullOrWhiteSpace(_options.DisplayName) ? "Sonic Admin" : _options.DisplayName.Trim();
 
         if (string.IsNullOrWhiteSpace(email))
+        {
             throw new InvalidOperationException("AdminSeed.Email is required when AdminSeed.Enabled=true.");
+        }
 
         if (string.IsNullOrWhiteSpace(password) || password.Length < 8)
+        {
             throw new InvalidOperationException("AdminSeed.Password is required (min 8 chars) when AdminSeed.Enabled=true.");
+        }
 
         using var scope = _serviceProvider.CreateScope();
         var userRepo = scope.ServiceProvider.GetRequiredService<IUserRepository>();
