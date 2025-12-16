@@ -26,6 +26,7 @@ using Sonic.Infrastructure.Posts;
 using Sonic.Infrastructure.Users;
 using Sonic.Api.Bootstrap;
 using Microsoft.OpenApi;
+using Sonic.Api.Config;
 
 namespace Sonic.Api;
 
@@ -36,6 +37,7 @@ public static class SonicApiServiceCollectionExtensions
         // Options
         services.Configure<JwtOptions>(config.GetSection(JwtOptions.SectionName));
         services.Configure<MongoDbSettings>(config.GetSection("MongoDbSettings"));
+        services.Configure<AdminSeedOptions>(config.GetSection(AdminSeedOptions.SectionName));
 
         // Infra
         services.AddSingleton<MongoDbContext>();
@@ -59,6 +61,9 @@ public static class SonicApiServiceCollectionExtensions
 
         // Startup hardening (indexes)
         services.AddHostedService<MongoIndexInitializerHostedService>();
+
+        // Admin bootstrap (seed)
+        services.AddHostedService<AdminBootstrapHostedService>();
 
         // Middleware
         // Note: with the "conventional" middleware version, this is NOT required, but harmless if present.
