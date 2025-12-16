@@ -4,7 +4,6 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using Sonic.Api.MiddleWares;
 using Sonic.Application.Auth.interfaces;
 using Sonic.Application.Auth.Services;
 using Sonic.Application.Campaigns.interfaces;

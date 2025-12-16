@@ -13,56 +13,61 @@ public sealed class MongoIndexInitializerHostedService(
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        // Fail fast if this breaks. Indexes are infra correctness.
-        await EnsureUniqueIndexAsync(
+        await EnsureIndexAsync(
             collectionName: "users",
             keysDoc: new BsonDocument { { "Email", 1 } },
-            desiredName: "ux_users_email",
+            indexName: "ux_users_email",
+            unique: true,
             cancellationToken);
 
-        await EnsureUniqueIndexAsync(
+        await EnsureIndexAsync(
             collectionName: "likes",
             keysDoc: new BsonDocument { { "PostId", 1 }, { "UserId", 1 } },
-            desiredName: "ux_likes_post_user",
+            indexName: "ux_likes_post_user",
+            unique: true,
             cancellationToken);
 
-        await EnsureUniqueIndexAsync(
+        await EnsureIndexAsync(
             collectionName: "campaignParticipations",
             keysDoc: new BsonDocument { { "PostId", 1 }, { "UserId", 1 } },
-            desiredName: "ux_campaign_participation_post_user",
+            indexName: "ux_campaign_participation_post_user",
+            unique: true,
             cancellationToken);
 
-        _logger.LogInformation("MongoDB indexes ensured successfully.");
+        _logger.LogInformation("MongoDB indexes ensured.");
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    private async Task EnsureUniqueIndexAsync(
+    private async Task EnsureIndexAsync(
         string collectionName,
         BsonDocument keysDoc,
-        string desiredName,
+        string indexName,
+        bool unique,
         CancellationToken cancellationToken)
     {
         var collection = _dbContext.GetDatabase().GetCollection<BsonDocument>(collectionName);
 
-        var existing = await (await collection.Indexes.ListAsync(cancellationToken)).ToListAsync(cancellationToken);
+        var existing = await (await collection.Indexes.ListAsync(cancellationToken))
+            .ToListAsync(cancellationToken);
 
         foreach (var idx in existing)
         {
-            if (!idx.TryGetValue("key", out var keyVal)) continue;
+            if (!idx.TryGetValue("key", out var keyVal) || keyVal.BsonType != BsonType.Document)
+                continue;
 
             var existingKeys = keyVal.AsBsonDocument;
 
-            // Same key spec already exists -> do NOT create another index (name can differ)
+            // Same key spec exists => already ensured (name irrelevant)
             if (existingKeys.Equals(keysDoc))
             {
-                var isUnique = idx.TryGetValue("unique", out var u) && u.IsBoolean && u.AsBoolean;
                 var existingName = idx.TryGetValue("name", out var n) ? n.AsString : "<unknown>";
+                var existingUnique = idx.TryGetValue("unique", out var u) && u.IsBoolean && u.AsBoolean;
 
-                if (!isUnique)
+                if (unique && !existingUnique)
                 {
                     throw new InvalidOperationException(
-                        $"Index exists on {collectionName}({keysDoc}) but is not unique (name='{existingName}').");
+                        $"Index exists on {collectionName}({keysDoc}) but is not unique (existing='{existingName}').");
                 }
 
                 _logger.LogInformation(
@@ -76,12 +81,20 @@ public sealed class MongoIndexInitializerHostedService(
         var keysDef = new BsonDocumentIndexKeysDefinition<BsonDocument>(keysDoc);
         var model = new CreateIndexModel<BsonDocument>(
             keysDef,
-            new CreateIndexOptions { Unique = true, Name = desiredName });
+            new CreateIndexOptions { Name = indexName, Unique = unique });
 
-        await collection.Indexes.CreateOneAsync(model, cancellationToken: cancellationToken);
-
-        _logger.LogInformation(
-            "Created unique index '{Name}' on {Collection}({Keys}).",
-            desiredName, collectionName, keysDoc);
+        try
+        {
+            await collection.Indexes.CreateOneAsync(model, cancellationToken: cancellationToken);
+            _logger.LogInformation("Created index '{Name}' on {Collection}({Keys}).", indexName, collectionName, keysDoc);
+        }
+        catch (MongoCommandException ex) when (
+            ex.Message.Contains("Index already exists with a different name", StringComparison.OrdinalIgnoreCase))
+        {
+            // Safety net if something created the same keys concurrently / previously with different name.
+            _logger.LogWarning(
+                "Index already exists on {Collection}({Keys}) under a different name. Skipping creation.",
+                collectionName, keysDoc);
+        }
     }
 }

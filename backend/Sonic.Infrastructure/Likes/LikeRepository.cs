@@ -13,25 +13,7 @@ public sealed class LikeRepository : ILikeRepository
     public LikeRepository(MongoDbContext dbContext)
     {
         _collection = dbContext.GetCollection<LikeDocument>("likes");
-        EnsureIndexes();
-    }
-
-    private void EnsureIndexes()
-    {
-        // Unique index on (PostId, UserId) to guarantee one like per user per post
-        var indexKeys = Builders<LikeDocument>.IndexKeys
-            .Ascending(x => x.PostId)
-            .Ascending(x => x.UserId);
-
-        var indexModel = new CreateIndexModel<LikeDocument>(
-            indexKeys,
-            new CreateIndexOptions
-            {
-                Unique = true,
-                Name = "IX_Likes_PostId_UserId"
-            });
-
-        _collection.Indexes.CreateOne(indexModel);
+        // EnsureIndexes(); // ❌ removed - indexes are created centrally at startup
     }
 
     public async Task<bool> ExistsAsync(

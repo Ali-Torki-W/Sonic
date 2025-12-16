@@ -13,25 +13,7 @@ public sealed class CampaignParticipationRepository : ICampaignParticipationRepo
     public CampaignParticipationRepository(MongoDbContext dbContext)
     {
         _collection = dbContext.GetCollection<CampaignParticipationDocument>("campaignParticipants");
-        EnsureIndexes();
-    }
-
-    private void EnsureIndexes()
-    {
-        // Unique (PostId, UserId) so a user can join a campaign at most once
-        var indexKeys = Builders<CampaignParticipationDocument>.IndexKeys
-            .Ascending(x => x.PostId)
-            .Ascending(x => x.UserId);
-
-        var indexModel = new CreateIndexModel<CampaignParticipationDocument>(
-            indexKeys,
-            new CreateIndexOptions
-            {
-                Unique = true,
-                Name = "IX_CampaignParticipation_PostId_UserId"
-            });
-
-        _collection.Indexes.CreateOne(indexModel);
+        // EnsureIndexes(); // ❌ removed - indexes are created centrally at startup
     }
 
     public async Task<bool> ExistsAsync(
