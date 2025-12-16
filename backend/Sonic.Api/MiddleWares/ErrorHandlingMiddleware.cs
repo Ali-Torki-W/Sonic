@@ -5,18 +5,16 @@ using Sonic.Application.Common.Errors;
 
 namespace Sonic.Api.MiddleWares;
 
-public sealed class ErrorHandlingMiddleware
+public sealed class ErrorHandlingMiddleware(
+    RequestDelegate next,
+    ILogger<ErrorHandlingMiddleware> logger,
+    IHostEnvironment env)
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
-    private readonly RequestDelegate _next;
-    private readonly ILogger<ErrorHandlingMiddleware> _logger;
-
-    public ErrorHandlingMiddleware(RequestDelegate next, ILogger<ErrorHandlingMiddleware> logger)
-    {
-        _next = next;
-        _logger = logger;
-    }
+    private readonly RequestDelegate _next = next;
+    private readonly ILogger<ErrorHandlingMiddleware> _logger = logger;
+    private readonly IHostEnvironment _env = env;
 
     public async Task InvokeAsync(HttpContext context)
     {
@@ -26,62 +24,112 @@ public sealed class ErrorHandlingMiddleware
         }
         catch (ApiException ex)
         {
-            // Your first-class application error type
-            _logger.LogWarning(ex, "Handled ApiException {Code} for {Method} {Path}",
-                ex.ErrorCode, context.Request.Method, context.Request.Path);
+            var code = ex.ErrorCode ?? "app.error";
 
-            await WriteProblemAsync(context,
+            _logger.LogWarning(ex,
+                "Handled ApiException {StatusCode} {Code} for {Method} {Path}",
+                ex.StatusCode, code, context.Request.Method, context.Request.Path);
+
+            await WriteProblemAsync(
+                context,
                 status: ex.StatusCode,
                 title: "Error",
                 detail: ex.Message,
-                code: ex.ErrorCode!);
+                errorCode: code);
         }
         catch (UnauthorizedAccessException ex)
         {
-            _logger.LogWarning(ex, "Forbidden for {Method} {Path}",
+            _logger.LogWarning(ex,
+                "Forbidden for {Method} {Path}",
                 context.Request.Method, context.Request.Path);
 
-            await WriteProblemAsync(context,
+            await WriteProblemAsync(
+                context,
                 status: StatusCodes.Status403Forbidden,
                 title: "Error",
                 detail: ex.Message,
-                code: "auth.forbidden");
+                errorCode: "auth.forbidden");
         }
         catch (ArgumentException ex)
         {
-            await WriteProblemAsync(context,
+            await WriteProblemAsync(
+                context,
                 status: StatusCodes.Status400BadRequest,
                 title: "Error",
                 detail: ex.Message,
-                code: "request.invalid");
+                errorCode: "request.invalid");
         }
         catch (InvalidOperationException ex)
         {
-            // Many domain guards throw InvalidOperationException; do NOT turn these into 500s
-            await WriteProblemAsync(context,
+            // Common for domain/service guard clauses
+            await WriteProblemAsync(
+                context,
                 status: StatusCodes.Status400BadRequest,
                 title: "Error",
                 detail: ex.Message,
-                code: "request.invalid_operation");
+                errorCode: "request.invalid_operation");
+        }
+        catch (FormatException ex)
+        {
+            await WriteProblemAsync(
+                context,
+                status: StatusCodes.Status400BadRequest,
+                title: "Error",
+                detail: ex.Message,
+                errorCode: "request.invalid_format");
         }
         catch (MongoWriteException ex) when (ex.WriteError.Category == ServerErrorCategory.DuplicateKey)
         {
-            await WriteProblemAsync(context,
+            await WriteProblemAsync(
+                context,
                 status: StatusCodes.Status409Conflict,
                 title: "Error",
                 detail: "Duplicate key error.",
-                code: "db.duplicate_key");
+                errorCode: "db.duplicate_key");
+        }
+        catch (MongoAuthenticationException ex)
+        {
+            _logger.LogError(ex,
+                "Mongo authentication failed for {Method} {Path}",
+                context.Request.Method, context.Request.Path);
+
+            await WriteProblemAsync(
+                context,
+                status: StatusCodes.Status503ServiceUnavailable,
+                title: "Error",
+                detail: "Database authentication failed.",
+                errorCode: "db.auth_failed");
+        }
+        catch (MongoConnectionException ex)
+        {
+            _logger.LogError(ex,
+                "Mongo connection failed for {Method} {Path}",
+                context.Request.Method, context.Request.Path);
+
+            await WriteProblemAsync(
+                context,
+                status: StatusCodes.Status503ServiceUnavailable,
+                title: "Error",
+                detail: "Database connection failed.",
+                errorCode: "db.unavailable");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled exception for {Method} {Path}",
+            _logger.LogError(ex,
+                "Unhandled exception for {Method} {Path}",
                 context.Request.Method, context.Request.Path);
 
-            await WriteProblemAsync(context,
+            var detail = _env.IsDevelopment()
+                ? $"{ex.GetType().Name}: {ex.Message}"
+                : "Unexpected server error.";
+
+            await WriteProblemAsync(
+                context,
                 status: StatusCodes.Status500InternalServerError,
                 title: "An error occurred while processing your request.",
-                detail: "Unexpected server error.",
-                code: "server.error");
+                detail: detail,
+                errorCode: "server.error",
+                exceptionType: _env.IsDevelopment() ? ex.GetType().FullName : null);
         }
     }
 
@@ -90,12 +138,10 @@ public sealed class ErrorHandlingMiddleware
         int status,
         string title,
         string detail,
-        string code)
+        string errorCode,
+        string? exceptionType = null)
     {
-        if (context.Response.HasStarted)
-        {
-            return;
-        }
+        if (context.Response.HasStarted) return;
 
         var problem = new ProblemDetails
         {
@@ -111,11 +157,16 @@ public sealed class ErrorHandlingMiddleware
                 404 => "https://tools.ietf.org/html/rfc9110#section-15.5.5",
                 409 => "https://tools.ietf.org/html/rfc9110#section-15.5.10",
                 500 => "https://tools.ietf.org/html/rfc9110#section-15.6.1",
+                503 => "https://tools.ietf.org/html/rfc9110#section-15.6.4",
                 _ => "https://tools.ietf.org/html/rfc9110"
             }
         };
 
-        problem.Extensions["code"] = code;
+        // Keep extension key stable as "code" (your API responses already use it)
+        problem.Extensions["code"] = errorCode;
+
+        if (!string.IsNullOrWhiteSpace(exceptionType))
+            problem.Extensions["exceptionType"] = exceptionType;
 
         context.Response.Clear();
         context.Response.StatusCode = status;
