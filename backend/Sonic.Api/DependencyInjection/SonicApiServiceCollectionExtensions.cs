@@ -65,10 +65,6 @@ public static class SonicApiServiceCollectionExtensions
         // Admin bootstrap (seed)
         services.AddHostedService<AdminBootstrapHostedService>();
 
-        // Middleware
-        // Note: with the "conventional" middleware version, this is NOT required, but harmless if present.
-        services.AddTransient<ErrorHandlingMiddleware>();
-
         // Controllers + JSON
         services.AddControllers().AddJsonOptions(o =>
         {
