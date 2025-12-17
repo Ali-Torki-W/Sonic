@@ -42,7 +42,7 @@ public sealed class CampaignsController(
     public async Task<ActionResult<PagedResult<PostResponse>>> GetCampaigns(
         [FromQuery] int page = 1,
         [FromQuery] int pageSize = 10,
-        [FromQuery] string? tag = null,
+        [FromQuery] List<string>? tag = null,
         [FromQuery(Name = "q")] string? search = null,
         [FromQuery] bool? featured = null,
         CancellationToken cancellationToken = default)

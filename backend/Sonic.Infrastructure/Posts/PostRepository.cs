@@ -72,7 +72,7 @@ public sealed class PostRepository : IPostRepository
         int page,
         int pageSize,
         PostType? type = null,
-        string? tag = null,
+        List<string>? tag = null,
         string? search = null,
         bool? featured = null,
         CancellationToken cancellationToken = default)
@@ -95,10 +95,18 @@ public sealed class PostRepository : IPostRepository
             filter &= builder.Eq(x => x.Type, type.Value);
         }
 
-        if (!string.IsNullOrWhiteSpace(tag))
+        if (tag is { Count: > 0 })
         {
-            var normalizedTag = tag.Trim().ToLowerInvariant();
-            filter &= builder.AnyEq(x => x.Tags, normalizedTag);
+            var normalizedTags = tag
+                .Where(t => !string.IsNullOrWhiteSpace(t))
+                .Select(t => t.Trim().ToLowerInvariant())
+                .Distinct()
+                .ToList();
+
+            if (normalizedTags.Count > 0)
+            {
+                filter &= builder.AnyIn(x => x.Tags, normalizedTags);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(search))

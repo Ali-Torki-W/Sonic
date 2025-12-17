@@ -17,7 +17,7 @@ public interface IPostRepository
         int page,
         int pageSize,
         PostType? type = null,
-        string? tag = null,
+        List<string>? tag = null,
         string? search = null,
         bool? featured = null,
         CancellationToken cancellationToken = default);
