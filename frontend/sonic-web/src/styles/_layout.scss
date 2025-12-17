@@ -1,0 +1,12 @@
+.sonic-container {
+    max-width: var(--sonic-maxw);
+    margin: 0 auto;
+    padding: 16px;
+}
+
+.sonic-card {
+    background: var(--sonic-surface);
+    border: 1px solid var(--sonic-border);
+    border-radius: var(--sonic-radius);
+    padding: 16px;
+}
