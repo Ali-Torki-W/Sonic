@@ -1,1 +1,67 @@
-<p>app-shell works!</p>
+<header class="topbar">
+    <div class="sonic-container topbar__row">
+        <button class="icon-btn burger" type="button" (click)="toggleMobile()" aria-label="Open menu">
+            ☰
+        </button>
+
+        <a class="brand" routerLink="/">Sonic</a>
+
+        <nav class="nav desktop">
+            @for (link of navLinks; track link.label) {
+            <a class="nav__link" [routerLink]="link.path" [queryParams]="link.queryParams ?? null"
+                routerLinkActive="active">
+                {{ link.label }}
+            </a>
+            }
+        </nav>
+
+        <div class="spacer"></div>
+
+        <div class="auth desktop">
+            @if (!isAuthenticated()) {
+            <a class="btn btn--ghost" routerLink="/account/login">Login</a>
+            <a class="btn btn--solid" routerLink="/account/register">Register</a>
+            } @else {
+            <a class="btn btn--ghost" routerLink="/profile">Profile</a>
+            <button class="btn btn--solid" type="button" (click)="logout()">Logout</button>
+            }
+        </div>
+    </div>
+
+    <!-- Mobile drawer -->
+    <div class="drawer" [class.drawer--open]="mobileOpen()">
+        <div class="drawer__backdrop" (click)="closeMobile()"></div>
+
+        <aside class="drawer__panel" role="dialog" aria-modal="true" aria-label="Navigation">
+            <div class="drawer__header">
+                <a class="brand" routerLink="/" (click)="closeMobile()">Sonic</a>
+                <button class="icon-btn" type="button" (click)="closeMobile()" aria-label="Close menu">✕</button>
+            </div>
+
+            <nav class="drawer__nav">
+                @for (link of navLinks; track link.label) {
+                <a class="drawer__link" [routerLink]="link.path" [queryParams]="link.queryParams ?? null"
+                    routerLinkActive="active" (click)="closeMobile()">
+                    {{ link.label }}
+                </a>
+                }
+            </nav>
+
+            <div class="drawer__auth">
+                @if (!isAuthenticated()) {
+                <a class="btn btn--ghost btn--block" routerLink="/account/login" (click)="closeMobile()">Login</a>
+                <a class="btn btn--solid btn--block" routerLink="/account/register" (click)="closeMobile()">Register</a>
+                } @else {
+                <a class="btn btn--ghost btn--block" routerLink="/profile" (click)="closeMobile()">Profile</a>
+                <button class="btn btn--solid btn--block" type="button" (click)="logout()">Logout</button>
+                }
+            </div>
+        </aside>
+    </div>
+</header>
+
+<main class="main">
+    <div class="sonic-container">
+        <router-outlet />
+    </div>
+</main>

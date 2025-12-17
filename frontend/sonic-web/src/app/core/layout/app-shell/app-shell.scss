@@ -1,0 +1,180 @@
+.topbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 1px solid var(--sonic-border);
+    background: var(--sonic-surface);
+}
+
+.topbar__row {
+    height: 56px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand {
+    font-weight: 700;
+    letter-spacing: 0.2px;
+}
+
+.spacer {
+    flex: 1 1 auto;
+}
+
+.nav {
+    display: flex;
+    gap: 8px;
+}
+
+.nav__link {
+    padding: 8px 10px;
+    border-radius: 10px;
+    color: var(--sonic-muted);
+}
+
+.nav__link.active {
+    color: var(--sonic-text);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.auth {
+    display: flex;
+    gap: 12px; // FIX: space between login/register
+    align-items: center;
+}
+
+.btn {
+    border: 1px solid var(--sonic-border);
+    border-radius: 999px;
+    padding: 8px 12px;
+    cursor: pointer;
+    background: transparent;
+    color: var(--sonic-text);
+}
+
+.btn--solid {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.btn--block {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+}
+
+.icon-btn {
+    border: 1px solid var(--sonic-border);
+    border-radius: 10px;
+    width: 38px;
+    height: 38px;
+    background: transparent;
+    color: var(--sonic-text);
+    cursor: pointer;
+}
+
+.burger {
+    display: none;
+}
+
+.main {
+    padding: 18px 0;
+}
+
+/* ===== Mobile drawer (fixed) ===== */
+.drawer {
+    display: none;
+}
+
+.drawer__backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.55);
+    opacity: 0;
+    transition: opacity 160ms ease;
+}
+
+.drawer__panel {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: min(86vw, 340px);
+    height: 100vh;
+    background: var(--sonic-surface);
+    border-right: 1px solid var(--sonic-border);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+
+    transform: translateX(-102%);
+    transition: transform 180ms ease;
+}
+
+.drawer__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--sonic-border);
+}
+
+.drawer__nav {
+    display: grid;
+    gap: 8px;
+    padding-top: 6px;
+}
+
+.drawer__link {
+    padding: 10px 12px;
+    border-radius: 12px;
+    color: var(--sonic-muted);
+    border: 1px solid transparent;
+}
+
+.drawer__link:hover {
+    color: var(--sonic-text);
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.06);
+}
+
+.drawer__link.active {
+    color: var(--sonic-text);
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.10);
+}
+
+.drawer__auth {
+    margin-top: auto;
+    display: grid;
+    gap: 10px;
+    padding-top: 12px;
+    border-top: 1px solid var(--sonic-border);
+}
+
+@media (max-width: 920px) {
+    .desktop {
+        display: none;
+    }
+
+    .burger {
+        display: inline-flex;
+    }
+
+    .drawer {
+        display: block;
+        pointer-events: none;
+    }
+
+    .drawer--open {
+        pointer-events: auto;
+    }
+
+    .drawer--open .drawer__backdrop {
+        opacity: 1;
+    }
+
+    .drawer--open .drawer__panel {
+        transform: translateX(0);
+    }
+}
