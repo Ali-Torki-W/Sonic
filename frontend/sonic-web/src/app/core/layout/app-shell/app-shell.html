@@ -1,8 +1,6 @@
 <header class="topbar">
     <div class="sonic-container topbar__row">
-        <button class="icon-btn burger" type="button" (click)="toggleMobile()" aria-label="Open menu">
-            ☰
-        </button>
+        <button class="icon-btn burger" type="button" (click)="toggleMobile()" aria-label="Open menu">☰</button>
 
         <a class="brand" routerLink="/">Sonic</a>
 
@@ -28,7 +26,6 @@
         </div>
     </div>
 
-    <!-- Mobile drawer -->
     <div class="drawer" [class.drawer--open]="mobileOpen()">
         <div class="drawer__backdrop" (click)="closeMobile()"></div>
 

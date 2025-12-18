@@ -1,16 +1,15 @@
-import { Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { AppShell } from './core/layout/app-shell/app-shell';
-
-import { RouterOutlet } from '@angular/router';
 
 @Component({
   selector: 'app-root',
   imports: [
-    RouterOutlet,
     AppShell
   ],
-  templateUrl: './app.html',
-  styleUrl: './app.scss'
+  template: `<sonic-app-shell />`,
+  // templateUrl: './app.html',
+  // styleUrl: './app.scss'
+  changeDetection: ChangeDetectionStrategy.OnPush,
 
 })
 export class App {

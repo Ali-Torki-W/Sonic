@@ -1,1 +1,66 @@
-<p>login-page works!</p>
+<div class="auth">
+    <!-- Background blobs like your React reference -->
+    <div class="auth__bg">
+        <div class="auth__blob auth__blob--a"></div>
+        <div class="auth__blob auth__blob--b"></div>
+    </div>
+
+    <div class="auth__wrap">
+        <a class="auth__back" routerLink="/">
+            <span class="auth__backIcon">←</span>
+            Back to home
+        </a>
+
+        <section class="auth__card">
+            <div class="auth__brand">
+                <div class="auth__logo" aria-hidden="true">⚡</div>
+                <div>
+                    <h1 class="auth__title">Welcome back</h1>
+                    <p class="auth__subtitle">Sign in to continue to Sonic</p>
+                </div>
+            </div>
+
+            @if (error()) {
+            <div class="auth__error" role="alert">
+                {{ error() }}
+            </div>
+            }
+
+            <form class="auth__form" (ngSubmit)="submit()">
+                <label class="auth__label" for="email">Email</label>
+                <div class="auth__field">
+                    <span class="auth__icon" aria-hidden="true">✉</span>
+                    <input id="email" name="email" class="auth__input" type="email" autocomplete="email"
+                        placeholder="you@example.com" [ngModel]="email()" (ngModelChange)="email.set($event)"
+                        required />
+                </div>
+
+                <label class="auth__label" for="password">Password</label>
+                <div class="auth__field">
+                    <span class="auth__icon" aria-hidden="true">🔒</span>
+                    <input id="password" name="password" class="auth__input"
+                        [type]="showPassword() ? 'text' : 'password'" autocomplete="current-password"
+                        placeholder="••••••••" [ngModel]="password()" (ngModelChange)="password.set($event)" required />
+                    <button class="auth__eye" type="button" (click)="togglePassword()"
+                        [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'">
+                        {{ showPassword() ? '🙈' : '👁' }}
+                    </button>
+                </div>
+
+                <button class="auth__submit" type="submit" [disabled]="loading()">
+                    @if (loading()) {
+                    <span class="auth__spinner" aria-hidden="true"></span>
+                    <span>Signing in...</span>
+                    } @else {
+                    <span>Sign in</span>
+                    }
+                </button>
+            </form>
+
+            <p class="auth__hint">
+                Don’t have an account?
+                <a routerLink="/account/register">Sign up</a>
+            </p>
+        </section>
+    </div>
+</div>
