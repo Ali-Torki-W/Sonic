@@ -1,13 +1,13 @@
-import { CanActivateFn, Router } from '@angular/router';
 import { inject } from '@angular/core';
+import { CanActivateFn, Router } from '@angular/router';
 import { AuthStateService } from '../auth/auth-state.service';
 
-export const authLoggedInGuard: CanActivateFn = () => {
+export const authLoggedInGuard: CanActivateFn = (_route, _state) => {
+  const authState = inject(AuthStateService);
   const router = inject(Router);
-  const auth = inject(AuthStateService);
 
-  if (!auth.isAuthenticated()) return true;
+  if (!authState.isAuthenticated()) return true;
 
-  router.navigate(['/feed']);
-  return false;
+  // Already logged in => keep them out of login/register pages.
+  return router.createUrlTree(['/dashboard']);
 };

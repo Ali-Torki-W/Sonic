@@ -9,8 +9,6 @@ import type { ProblemDetails } from '../../../../core/http/problem-details';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { LoginRequest } from '../../../../shared/contracts/auth/login-request';
 
-// TODO: replace with your real DTO export path (no DTO variants, no guessing).
-
 @Component({
   selector: 'sonic-login-page',
   standalone: true,
@@ -55,7 +53,8 @@ export class LoginPage {
 
       const returnUrl = this.activatedRoute.snapshot.queryParamMap.get('returnUrl') ?? '/feed';
       await this.router.navigateByUrl(returnUrl);
-    } catch (err: any) {
+    }
+    catch (err: any) {
       // Common when API is unreachable / CORS is misconfigured:
       if (err?.status === 0) {
         this.error.set('Network/CORS error: cannot reach API.');
@@ -64,7 +63,8 @@ export class LoginPage {
 
       const pd = this.tryReadProblemDetails(err);
       this.error.set(pd?.detail ?? 'Login failed.');
-    } finally {
+    }
+    finally {
       this.loading.set(false);
     }
   }
@@ -84,7 +84,7 @@ export class LoginPage {
     }
 
     if (typeof body === 'object') {
-      // Your middleware returns { title, status, detail, instance, type, code }
+      // Middleware returns { title, status, detail, instance, type, code }
       return body as ProblemDetails;
     }
 

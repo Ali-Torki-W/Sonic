@@ -42,7 +42,7 @@ export class AppShell {
   }
 
   logout(): void {
-    this.auth.logout();
+    this.auth.clearSession();
     this.closeMobile();
   }
 }

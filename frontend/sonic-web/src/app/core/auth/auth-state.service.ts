@@ -1,24 +1,54 @@
 import { Injectable, computed, signal } from '@angular/core';
-import { clearAuth, readAccessToken, writeAuth } from './token-storage';
+
+const ACCESS_TOKEN_KEY = 'sonic.accessToken';
+const EXPIRES_AT_UTC_KEY = 'sonic.expiresAtUtc';
 
 @Injectable({ providedIn: 'root' })
 export class AuthStateService {
-    private readonly _accessToken = signal<string | null>(readAccessToken());
+    private readonly accessTokenSig = signal<string | null>(null);
+    private readonly expiresAtUtcSig = signal<string | null>(null);
 
-    readonly accessToken = this._accessToken.asReadonly();
+    readonly accessToken = this.accessTokenSig.asReadonly();
+    readonly expiresAtUtc = this.expiresAtUtcSig.asReadonly();
 
     readonly isAuthenticated = computed(() => {
-        const t = this._accessToken();
-        return !!t && t.trim().length > 0;
+        const token = this.accessTokenSig();
+        if (!token) return false;
+
+        const expiresAt = this.expiresAtUtcSig();
+        if (!expiresAt) return false;
+
+        const ms = Date.parse(expiresAt);
+        if (Number.isNaN(ms)) return false;
+
+        return Date.now() < ms;
     });
 
-    setSession(accessToken: string, expiresAtUtcIso: string): void {
-        writeAuth(accessToken, expiresAtUtcIso);
-        this._accessToken.set(accessToken);
+    constructor() {
+        const token = localStorage.getItem(ACCESS_TOKEN_KEY);
+        const expiresAt = localStorage.getItem(EXPIRES_AT_UTC_KEY);
+
+        this.accessTokenSig.set(token);
+        this.expiresAtUtcSig.set(expiresAt);
     }
 
-    logout(): void {
-        clearAuth();
-        this._accessToken.set(null);
+    setSession(accessToken: string, expiresAtUtc: string): void {
+        localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+        localStorage.setItem(EXPIRES_AT_UTC_KEY, expiresAtUtc);
+
+        this.accessTokenSig.set(accessToken);
+        this.expiresAtUtcSig.set(expiresAtUtc);
+    }
+
+    clearSession(): void {
+        localStorage.removeItem(ACCESS_TOKEN_KEY);
+        localStorage.removeItem(EXPIRES_AT_UTC_KEY);
+
+        this.accessTokenSig.set(null);
+        this.expiresAtUtcSig.set(null);
+    }
+
+    getAccessToken(): string | null {
+        return this.accessTokenSig();
     }
 }
