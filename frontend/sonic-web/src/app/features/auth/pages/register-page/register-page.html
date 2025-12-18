@@ -1,1 +1,87 @@
-<p>register-page works!</p>
+<div class="auth">
+    <div class="auth__bg">
+        <div class="auth__blob auth__blob--a"></div>
+        <div class="auth__blob auth__blob--b"></div>
+    </div>
+
+    <div class="auth__wrap">
+        <a class="auth__back" routerLink="/">
+            <span class="auth__backIcon">←</span>
+            Back to home
+        </a>
+
+        <section class="auth__card">
+            <div class="auth__brand">
+                <div class="auth__logo" aria-hidden="true">⚡</div>
+                <div>
+                    <h1 class="auth__title">Create your account</h1>
+                    <p class="auth__subtitle">Join Sonic and start sharing</p>
+                </div>
+            </div>
+
+            @if (error()) {
+            <div class="auth__error" role="alert">
+                {{ error() }}
+            </div>
+            }
+
+            <form class="auth__form" (ngSubmit)="submit()">
+                <label class="auth__label" for="displayName">Display name</label>
+                <div class="auth__field">
+                    <span class="auth__icon" aria-hidden="true">👤</span>
+                    <input id="displayName" name="displayName" class="auth__input" type="text" autocomplete="name"
+                        placeholder="Your name" [ngModel]="displayName()" (ngModelChange)="displayName.set($event)"
+                        required />
+                </div>
+
+                <label class="auth__label" for="email">Email</label>
+                <div class="auth__field">
+                    <span class="auth__icon" aria-hidden="true">✉</span>
+                    <input id="email" name="email" class="auth__input" type="email" autocomplete="email"
+                        placeholder="you@example.com" [ngModel]="email()" (ngModelChange)="email.set($event)"
+                        required />
+                </div>
+
+                <label class="auth__label" for="password">Password</label>
+                <div class="auth__field">
+                    <span class="auth__icon" aria-hidden="true">🔒</span>
+                    <input id="password" name="password" class="auth__input"
+                        [type]="showPassword() ? 'text' : 'password'" autocomplete="new-password" placeholder="••••••••"
+                        [ngModel]="password()" (ngModelChange)="password.set($event)" required />
+                    <button class="auth__eye" type="button" (click)="togglePassword()"
+                        [attr.aria-label]="showPassword() ? 'Hide password' : 'Show password'">
+                        {{ showPassword() ? '🙈' : '👁' }}
+                    </button>
+                </div>
+
+                <label class="auth__label" for="confirmPassword">Confirm password</label>
+                <div class="auth__field">
+                    <span class="auth__icon" aria-hidden="true">🔒</span>
+                    <input id="confirmPassword" name="confirmPassword" class="auth__input"
+                        [type]="showPassword() ? 'text' : 'password'" autocomplete="new-password" placeholder="••••••••"
+                        [ngModel]="confirmPassword()" (ngModelChange)="confirmPassword.set($event)" required />
+                </div>
+
+                @if (passwordMismatch()) {
+                <div class="auth__warn" role="alert">
+                    Passwords do not match.
+                </div>
+                }
+
+                <button class="auth__submit" type="submit" [disabled]="!canSubmit()">
+                    @if (loading()) {
+                    <span class="auth__spinner" aria-hidden="true"></span>
+                    <span>Creating account...</span>
+                    } @else {
+                    <span>Sign up</span>
+                    }
+                </button>
+            </form>
+
+            <p class="auth__hint">
+                Already have an account?
+                <a routerLink="/account/login">Sign in</a>
+            </p>
+        </section>
+    </div>
+</div>
