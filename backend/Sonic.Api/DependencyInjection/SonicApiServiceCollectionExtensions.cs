@@ -31,12 +31,29 @@ namespace Sonic.Api;
 
 public static class SonicApiServiceCollectionExtensions
 {
+    public const string CorsPolicyName = "SonicCors"; // NEW
+
     public static IServiceCollection AddSonicApi(this IServiceCollection services, IConfiguration config)
     {
         // Options
         services.Configure<JwtOptions>(config.GetSection(JwtOptions.SectionName));
         services.Configure<MongoDbSettings>(config.GetSection("MongoDbSettings"));
         services.Configure<AdminSeedOptions>(config.GetSection(AdminSeedOptions.SectionName));
+
+        // CORS // NEW
+        var allowedOrigins = config.GetSection("Cors:AllowedOrigins").Get<string[]>() // NEW
+                             ?? new[] { "http://localhost:4200" }; // NEW
+
+        services.AddCors(o => // NEW
+        {
+            o.AddPolicy(CorsPolicyName, p => // NEW
+            {
+                p.WithOrigins(allowedOrigins) // NEW
+                 .AllowAnyHeader() // NEW
+                 .AllowAnyMethod(); // NEW
+                // NOTE: no AllowCredentials() for JWT header auth (Angular sends Authorization header). // NEW
+            });
+        });
 
         // Infra
         services.AddSingleton<MongoDbContext>();

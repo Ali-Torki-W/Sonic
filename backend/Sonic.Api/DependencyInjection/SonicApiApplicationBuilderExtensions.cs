@@ -12,6 +12,8 @@ public static class SonicApiApplicationBuilderExtensions
 
         app.UseMiddleware<ErrorHandlingMiddleware>();
 
+        app.UseCors(SonicApiServiceCollectionExtensions.CorsPolicyName); // NEW
+
         app.UseAuthentication();
         app.UseAuthorization();
 
