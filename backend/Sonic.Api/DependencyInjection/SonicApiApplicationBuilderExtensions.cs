@@ -10,9 +10,9 @@ public static class SonicApiApplicationBuilderExtensions
     {
         app.UseRouting();
 
-        app.UseMiddleware<ErrorHandlingMiddleware>();
+        app.UseCors(SonicApiServiceCollectionExtensions.CorsPolicyName); // NEW: moved above error middleware
 
-        app.UseCors(SonicApiServiceCollectionExtensions.CorsPolicyName); // NEW
+        app.UseMiddleware<ErrorHandlingMiddleware>(); // MOVED: now after CORS
 
         app.UseAuthentication();
         app.UseAuthorization();
