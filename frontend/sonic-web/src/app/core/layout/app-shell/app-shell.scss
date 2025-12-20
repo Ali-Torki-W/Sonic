@@ -1,252 +1,318 @@
-/* App Shell - Refined & Clean with Gradient Header */
+/* src/app/core/layout/app-shell/app-shell.scss */
 
+/* ===== Theme tokens (local to the shell) ===== */
+:host {
+    /* Colors */
+    --bg: #0b0c10;
+    --surface: #141622;
+    --surface-2: #10121a;
+    --border: rgba(255, 255, 255, 0.12);
+
+    --text: rgba(255, 255, 255, 0.92);
+    --muted: rgba(255, 255, 255, 0.68);
+
+    --primary: #8f76ff;
+    --primary-2: #5db3ff;
+    --danger: #ff5d73;
+
+    /* Layout */
+    --radius: 16px;
+    --radius-sm: 12px;
+    --topbar-h: 64px;
+
+    display: block;
+    min-height: 100vh;
+    /* Prevent horizontal scrolling at the root level */
+    overflow-x: hidden;
+
+    background:
+        radial-gradient(900px 520px at 18% 8%, rgba(143, 118, 255, 0.18), transparent 60%),
+        radial-gradient(800px 520px at 82% 0%, rgba(93, 179, 255, 0.16), transparent 55%),
+        radial-gradient(900px 620px at 60% 100%, rgba(143, 118, 255, 0.12), transparent 60%),
+        linear-gradient(180deg, #0b0c10, #07080b);
+
+    color: var(--text);
+}
+
+/* Container utility used by your HTML */
+.sonic-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    /* Use padding-inline for better RTL support */
+    padding-inline: 16px;
+    /* Ensure box-sizing includes padding and border */
+    box-sizing: border-box;
+}
+
+/* ===== Topbar ===== */
 .topbar {
     position: sticky;
     top: 0;
-    z-index: 10;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-    background: linear-gradient(135deg,
-            rgba(255, 255, 255, 0.98) 0%,
-            rgba(238, 242, 255, 0.98) 30%,
-            rgba(240, 240, 255, 0.98) 60%,
-            rgba(255, 255, 255, 0.98) 100%);
-    backdrop-filter: blur(10px);
+    z-index: 50;
+
+    border-bottom: 1px solid var(--border);
+    background: rgba(14, 15, 20, 0.92);
+    backdrop-filter: blur(12px);
 }
 
 .topbar__row {
-    height: 56px;
+    height: var(--topbar-h);
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 0 20px;
-    max-width: 1200px;
-    margin: 0 auto;
 }
 
+/* Brand */
 .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+
+    font-size: 18px;
     font-weight: 700;
-    letter-spacing: 0.2px;
+    letter-spacing: -0.02em;
+
+    color: var(--text);
+    text-decoration: none;
+
+    &:hover {
+        color: rgba(255, 255, 255, 0.98);
+    }
+}
+
+/* Desktop nav */
+.nav {
     display: flex;
     align-items: center;
-    gap: 8px;
-    color: #1e293b;
+    gap: 6px;
+    margin-left: 10px;
+}
 
-    &::before {
-        content: '⚡';
-        font-size: 20px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #3b82f6 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+.nav__link {
+    text-decoration: none;
+    color: var(--muted);
+    font-size: 14px;
+
+    padding: 9px 12px;
+    border-radius: 999px;
+
+    transition: 180ms ease;
+    border: 1px solid transparent;
+
+    &:hover {
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.06);
+        border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    &.active {
+        color: rgba(255, 255, 255, 0.96);
+        background: rgba(143, 118, 255, 0.18);
+        border-color: rgba(143, 118, 255, 0.35);
     }
 }
 
 .spacer {
-    flex: 1 1 auto;
+    flex: 1;
 }
 
-.nav {
-    display: flex;
-    gap: 8px;
-}
-
-.nav__link {
-    padding: 8px 12px;
-    border-radius: 8px;
-    color: #4a5568;
-    text-decoration: none;
-    font-weight: 500;
-    font-size: 14px;
-    transition: all 0.2s ease;
-
-    &:hover {
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
-        color: #2d3748;
-    }
-
-    &.active {
-        background: linear-gradient(135deg, #667eea 0%, #3b82f6 100%);
-        color: white;
-        font-weight: 600;
-    }
-}
-
+/* Auth group */
 .auth {
     display: flex;
-    gap: 12px;
     align-items: center;
+    gap: 10px;
 }
 
+/* Buttons */
 .btn {
-    border: 1px solid rgba(102, 126, 234, 0.3);
-    border-radius: 8px;
-    padding: 8px 16px;
-    cursor: pointer;
-    background: white;
-    color: #2d3748;
-    font-weight: 500;
-    font-size: 14px;
-    transition: all 0.2s ease;
-
-    &:hover {
-        border-color: #667eea;
-        background: linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(59, 130, 246, 0.08) 100%);
-        color: #2d3748;
-    }
-
-    &--solid {
-        background: linear-gradient(135deg, #667eea 0%, #3b82f6 100%);
-        color: white;
-        border-color: transparent;
-
-        &:hover {
-            background: linear-gradient(135deg, #5a67d8 0%, #2563eb 100%);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-        }
-    }
-
-    &--block {
-        width: 100%;
-        text-align: center;
-    }
-}
-
-.icon-btn {
-    border: 1px solid rgba(102, 126, 234, 0.3);
-    border-radius: 8px;
-    width: 38px;
     height: 38px;
-    background: white;
-    color: #2d3748;
-    cursor: pointer;
-    display: flex;
+    padding: 0 14px;
+    border-radius: 999px;
+
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+
+    text-decoration: none;
+    cursor: pointer;
+    user-select: none;
+
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    transition: 180ms ease;
+
+    &:active {
+        transform: translateY(1px);
+    }
+}
+
+.btn--ghost {
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.86);
 
     &:hover {
-        border-color: #667eea;
-        color: #667eea;
-        background: rgba(102, 126, 234, 0.05);
+        background: rgba(255, 255, 255, 0.10);
+        color: rgba(255, 255, 255, 0.96);
     }
+}
+
+.btn--solid {
+    background: rgba(143, 118, 255, 0.92);
+    border-color: rgba(143, 118, 255, 0.55);
+    color: #0b0c10;
+
+    &:hover {
+        background: rgba(143, 118, 255, 1);
+    }
+}
+
+.btn--block {
+    width: 100%;
+}
+
+/* Icon buttons (burger, close) */
+.icon-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 18px;
+    line-height: 1;
+
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.90);
+
+    cursor: pointer;
+    transition: 180ms ease;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.10);
+    }
+}
+
+/* Desktop/mobile toggles */
+.desktop {
+    display: none;
 }
 
 .burger {
-    display: none;
+    display: inline-flex;
 }
 
+/* ===== Main area ===== */
 .main {
-    padding: 24px 20px;
-    max-width: 1200px;
-    margin: 0 auto;
-    min-height: calc(100vh - 56px);
-    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    padding: 18px 0 48px;
+    /* Prevent any horizontal overflow in main content */
+    overflow-x: clip;
 }
 
-/* Mobile drawer */
+.main .sonic-container {
+    background: rgba(16, 18, 26, 0.80);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: var(--radius);
+    padding: 18px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+    /* Ensure box model includes padding and border */
+    box-sizing: border-box;
+    /* Prevent content from expanding beyond container */
+    max-inline-size: 100%;
+    /* Standard property for better browser support */
+    max-width: 100%;
+}
+
+/* ===== Drawer (mobile) ===== */
 .drawer {
-    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 80;
+
+    pointer-events: none;
+    opacity: 0;
+    transition: 220ms ease;
+}
+
+.drawer--open {
+    pointer-events: auto;
+    opacity: 1;
 }
 
 .drawer__backdrop {
-    position: fixed;
+    position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.4);
-    opacity: 0;
-    transition: opacity 160ms ease;
+    background: rgba(0, 0, 0, 0.62);
 }
 
 .drawer__panel {
-    position: fixed;
+    position: absolute;
     top: 0;
-    left: 0;
-    width: min(86vw, 320px);
-    height: 100vh;
-    background: linear-gradient(135deg,
-            rgba(255, 255, 255, 0.98) 0%,
-            rgba(238, 242, 255, 0.98) 100%);
-    border-right: 1px solid rgba(102, 126, 234, 0.15);
-    padding: 20px;
+    right: 0;
+    height: 100%;
+    width: min(360px, 92vw);
+
+    background: rgba(14, 15, 20, 0.96);
+    border-left: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: -18px 0 60px rgba(0, 0, 0, 0.65);
+
+    padding: 14px;
+
+    transform: translateX(16px);
+    transition: 220ms ease;
+
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    transform: translateX(-102%);
-    transition: transform 180ms ease;
-    box-shadow: 0 0 40px rgba(102, 126, 234, 0.1);
+    gap: 14px;
+
+    backdrop-filter: blur(12px);
+}
+
+.drawer--open .drawer__panel {
+    transform: translateX(0);
 }
 
 .drawer__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-bottom: 16px;
-    border-bottom: 1px solid rgba(102, 126, 234, 0.15);
-}
-
-.drawer__brand {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: 700;
-    color: #1e293b;
-
-    &::before {
-        content: '⚡';
-        font-size: 20px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #3b82f6 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-}
-
-.drawer__close {
-    border: 1px solid rgba(102, 126, 234, 0.3);
-    border-radius: 8px;
-    width: 36px;
-    height: 36px;
-    background: white;
-    color: #2d3748;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-
-    &:hover {
-        border-color: #667eea;
-        color: #667eea;
-        background: rgba(102, 126, 234, 0.05);
-    }
+    gap: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.10);
 }
 
 .drawer__nav {
-    display: grid;
+    display: flex;
+    flex-direction: column;
     gap: 8px;
-    padding-top: 8px;
+    padding-top: 6px;
 }
 
 .drawer__link {
-    padding: 12px 16px;
-    border-radius: 8px;
-    color: #4a5568;
-    border: 1px solid rgba(102, 126, 234, 0.15);
     text-decoration: none;
-    font-weight: 500;
-    background: white;
-    transition: all 0.2s ease;
+    color: rgba(255, 255, 255, 0.84);
+
+    padding: 12px 12px;
+    border-radius: 14px;
+
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(255, 255, 255, 0.06);
+
+    transition: 180ms ease;
 
     &:hover {
-        border-color: #667eea;
-        color: #2d3748;
-        background: rgba(102, 126, 234, 0.05);
+        background: rgba(255, 255, 255, 0.10);
     }
 
     &.active {
-        background: linear-gradient(135deg, #667eea 0%, #3b82f6 100%);
-        color: white;
-        border-color: transparent;
-        font-weight: 600;
+        background: rgba(143, 118, 255, 0.18);
+        border-color: rgba(143, 118, 255, 0.35);
     }
 }
 
@@ -254,33 +320,51 @@
     margin-top: auto;
     display: grid;
     gap: 10px;
-    padding-top: 16px;
-    border-top: 1px solid rgba(102, 126, 234, 0.15);
+    padding-top: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.10);
 }
 
-@media (max-width: 920px) {
+/* ===== Desktop breakpoint ===== */
+@media (min-width: 920px) {
     .desktop {
-        display: none;
+        display: flex;
     }
 
     .burger {
-        display: inline-flex;
+        display: none;
     }
 
-    .drawer {
-        display: block;
-        pointer-events: none;
+    .main {
+        padding: 24px 0 64px;
     }
 
-    .drawer--open {
-        pointer-events: auto;
+    .main .sonic-container {
+        padding: 22px;
+    }
+}
+
+/* ===== Small mobile tightening ===== */
+@media (max-width: 560px) {
+    .topbar__row {
+        gap: 10px;
     }
 
-    .drawer--open .drawer__backdrop {
-        opacity: 1;
+    .main .sonic-container {
+        padding: 14px;
+        border-radius: 14px;
     }
 
-    .drawer--open .drawer__panel {
-        transform: translateX(0);
+    .icon-btn {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
     }
+}
+
+/* ===== Global box-sizing fix ===== */
+/* This ensures consistent box model across all browsers */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
 }

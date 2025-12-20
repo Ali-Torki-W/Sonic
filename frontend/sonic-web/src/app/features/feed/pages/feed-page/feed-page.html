@@ -1,1 +1,150 @@
-<p>feed-page works!</p>
+<section class="feed">
+    <header class="feed__header">
+        <div class="feed__title">
+            <h1>Explore</h1>
+            <p>Discover posts, guides, courses, news, and campaigns.</p>
+        </div>
+
+        <div class="feed__meta">
+            <span class="pill pill--muted">
+                {{ items().length }} / {{ totalItems() }}
+            </span>
+
+            <button type="button" class="btn btn--ghost" (click)="clearFilters()" [disabled]="loading()">
+                Clear filters
+            </button>
+        </div>
+    </header>
+
+    <div class="controls">
+        <!-- Search -->
+        <div class="search">
+            <input class="input" type="text" [value]="q()" (input)="setSearch(($any($event.target)).value)"
+                placeholder="Search posts (title/body)…" aria-label="Search posts" />
+            <button type="button" class="btn btn--solid" (click)="searchNow()" [disabled]="loading()">
+                Search
+            </button>
+        </div>
+
+        <!-- Type tabs -->
+        <div class="types">
+            <button type="button" class="chip" [class.chip--active]="selectedType() === null" (click)="setType(null)">
+                All
+            </button>
+
+            @for (t of typeOptions; track t) {
+            <button type="button" class="chip" [class.chip--active]="selectedType() === t" (click)="setType(t)">
+                {{ t }}
+            </button>
+            }
+        </div>
+
+        <!-- Tags + featured -->
+        <div class="filters">
+            <div class="tags">
+                <div class="tags__row">
+                    <input class="input" type="text" [value]="tagDraft()"
+                        (input)="setTagDraft(($any($event.target)).value)" placeholder="Add a tag…"
+                        aria-label="Add tag" />
+                    <button type="button" class="btn btn--ghost" (click)="addTag()" [disabled]="loading()">
+                        + Add
+                    </button>
+
+                    <button type="button" class="btn btn--ghost" [class.btn--ghost-active]="featuredOnly()"
+                        (click)="toggleFeatured()" [disabled]="loading()" title="Show featured posts only">
+                        Featured
+                    </button>
+                </div>
+
+                @if (selectedTags().length > 0) {
+                <div class="tags__chips">
+                    @for (tag of selectedTags(); track tag) {
+                    <span class="tag">
+                        #{{ tag }}
+                        <button type="button" class="tag__x" (click)="removeTag(tag)" aria-label="Remove tag">✕</button>
+                    </span>
+                    }
+                </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (error()) {
+    <div class="alert">
+        <div class="alert__title">Request failed</div>
+        <div class="alert__msg">{{ error() }}</div>
+        @if (errorCode()) {
+        <div class="alert__code">code: {{ errorCode() }}</div>
+        }
+    </div>
+    }
+
+    <!-- List -->
+    <div class="list">
+        @if (loading() && items().length === 0) {
+        <div class="skeleton">
+            <div class="skeleton__card"></div>
+            <div class="skeleton__card"></div>
+            <div class="skeleton__card"></div>
+        </div>
+        } @else {
+        @if (items().length === 0) {
+        <div class="empty">
+            <div class="empty__title">No posts found</div>
+            <div class="empty__msg">Try changing filters or clearing them.</div>
+        </div>
+        } @else {
+        @for (post of items(); track post.id) {
+        <article class="card">
+            <header class="card__head">
+                <div class="card__type">{{ post.type }}</div>
+                <div class="card__time">{{ post.createdAt | date: 'medium' }}</div>
+            </header>
+
+            <a class="card__title" [routerLink]="['/posts', post.id]">
+                {{ post.title }}
+            </a>
+
+            <p class="card__body">
+                {{ post.body }}
+            </p>
+
+            <div class="card__tags">
+                @for (t of post.tags; track t) {
+                <span class="mini-tag">#{{ t }}</span>
+                }
+            </div>
+
+            <footer class="card__foot">
+                <div class="card__author">
+                    <span class="muted">Author</span>
+                    <span class="author">{{ authorLabel(post.authorId) }}</span>
+                </div>
+
+                <div class="card__stats">
+                    <span class="pill">❤ {{ post.likeCount }}</span>
+                    @if (post.type === 'Campaign') {
+                    <span class="pill">👥 {{ post.participantsCount }}</span>
+                    }
+                    @if (post.isFeatured) {
+                    <span class="pill pill--accent">★ Featured</span>
+                    }
+                </div>
+            </footer>
+        </article>
+        }
+
+        <div class="more">
+            @if (canLoadMore()) {
+            <button type="button" class="btn btn--solid" (click)="loadMore()" [disabled]="loading()">
+                @if (loading()) { Loading… } @else { Load more }
+            </button>
+            } @else {
+            <span class="muted">End of list</span>
+            }
+        </div>
+        }
+        }
+    </div>
+</section>

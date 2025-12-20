@@ -1,6 +1,6 @@
 export interface PagedResult<T> {
-    items: readonly T[];
+    items: T[];
     page: number;
     pageSize: number;
-    totalItems: number; // backend long
+    totalItems: number;
 }
