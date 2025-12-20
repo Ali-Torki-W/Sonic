@@ -26,7 +26,7 @@ export class FeedService {
             .set('pageSize', String(query.pageSize));
 
         if (query.type) {
-            params = params.set('type', query.type); // enum values are strings
+            params = params.set('type', query.type);
         }
 
         for (const t of (query.tags ?? [])) {
@@ -40,8 +40,8 @@ export class FeedService {
         if (query.featured === true) {
             params = params.set('featured', 'true');
         }
+        // featured null/false => omit
 
-        // ApiClient.get expects HttpParams directly (NOT { params })
         return this.api.get<PagedResult<PostResponse>>('/posts', params);
     }
 }

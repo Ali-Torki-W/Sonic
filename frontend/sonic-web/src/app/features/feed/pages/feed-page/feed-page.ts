@@ -6,7 +6,8 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { PostResponse } from '../../../../shared/contracts/post/post-response';
 import { PostType } from '../../../../shared/contracts/post/post-type';
 import { FeedQuery, FeedService } from '../../services/feed-service';
-import { AuthorNameCache } from '../../../../core/users/author-name-cache';
+import { AuthorDisplayNameCache } from '../../../../core/users/author-name-cache';
+
 
 type ApiProblem = {
   title?: string;
@@ -23,8 +24,8 @@ type ApiProblem = {
   styleUrl: './feed-page.scss',
 })
 export class FeedPage {
-  private readonly feed = inject(FeedService);
-  private readonly authorNamesCache = inject(AuthorNameCache);
+  private readonly feedService = inject(FeedService);
+  private readonly authorCache = inject(AuthorDisplayNameCache);
   private readonly destroyRef = inject(DestroyRef);
 
   // ---- UI state
@@ -37,18 +38,20 @@ export class FeedPage {
   readonly pageSize = signal(10);
   readonly totalItems = signal(0);
   readonly items = signal<readonly PostResponse[]>([]);
-
   readonly canLoadMore = computed(() => this.items().length < this.totalItems());
-
-  // ---- author names resolved (id -> displayName)
-  readonly authorNames = signal<Record<string, string>>({});
 
   // ---- filters
   readonly q = signal('');
   readonly featuredOnly = signal(false);
   readonly selectedType = signal<PostType | null>(null);
+
+  // tags: one-by-one only (no comma split)
   readonly selectedTags = signal<readonly string[]>([]);
   readonly tagDraft = signal('');
+
+  // ---- author display names
+  readonly authorNames = signal<Record<string, string>>({});
+  private readonly authorRequested = new Set<string>();
 
   readonly typeOptions: readonly PostType[] = [
     PostType.Experience,
@@ -88,40 +91,20 @@ export class FeedPage {
     this.refresh();
   }
 
-  setSearch(value: string): void {
-    this.q.set(value);
-  }
-
-  searchNow(): void {
+  onSearchEnter(): void {
     this.refresh();
   }
 
-  setTagDraft(value: string): void {
-    this.tagDraft.set(value);
-  }
+  addTagFromDraft(): void {
+    const tag = this.tagDraft().trim();
+    if (!tag) return;
 
-  addTag(): void {
-    const raw = this.tagDraft().trim();
-    if (!raw) return;
-
-    // strict: add ONE tag only (no commas)
-    if (raw.includes(',')) {
-      this.error.set('Add tags one by one (no commas).');
-      this.errorCode.set('ui.tags.single_only');
-      return;
-    }
-
-    const normalized = this.normalizeTag(raw);
-    if (!normalized) return;
-
-    const current = this.selectedTags();
-    const exists = current.some(t => t.toLowerCase() === normalized.toLowerCase());
-    if (exists) {
+    if (this.selectedTags().includes(tag)) {
       this.tagDraft.set('');
       return;
     }
 
-    this.selectedTags.set([...current, normalized]);
+    this.selectedTags.set([...this.selectedTags(), tag]);
     this.tagDraft.set('');
     this.refresh();
   }
@@ -140,9 +123,9 @@ export class FeedPage {
     this.refresh();
   }
 
-  authorLabel(authorId: string): string {
+  authorName(authorId: string): string {
     const map = this.authorNames();
-    return map[authorId] ?? this.shortId(authorId);
+    return map[authorId] ?? '…';
   }
 
   // --------------------
@@ -162,18 +145,18 @@ export class FeedPage {
       featured: this.featuredOnly() ? true : null,
     };
 
-    this.feed
+    this.feedService
       .getFeed(query)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (result) => {
-          const merged = opts.append ? [...this.items(), ...result.items] : result.items;
+        next: (res) => {
+          const nextItems = opts.append ? [...this.items(), ...res.items] : res.items;
+          this.items.set(nextItems);
+          this.totalItems.set(res.totalItems);
 
-          this.items.set(merged);
-          this.totalItems.set(result.totalItems);
+          this.prefetchAuthorNames(nextItems);
+
           this.loading.set(false);
-
-          this.resolveAuthors(merged);
         },
         error: (err: unknown) => {
           const { message, code } = this.extractProblem(err);
@@ -184,37 +167,33 @@ export class FeedPage {
       });
   }
 
-  private resolveAuthors(posts: readonly PostResponse[]): void {
-    const current = this.authorNames();
-    const missing = new Set<string>();
-
+  private prefetchAuthorNames(posts: readonly PostResponse[]): void {
     for (const p of posts) {
-      const id = (p.authorId ?? '').trim();
-      if (!id) continue;
-      if (!current[id]) missing.add(id);
-    }
+      const authorId = (p.authorId ?? '').trim();
+      if (!authorId) continue;
 
-    if (missing.size === 0) return;
+      // already loaded
+      if (this.authorNames()[authorId]) continue;
 
-    for (const authorId of missing) {
-      this.authorNamesCache
+      // already requested (avoid spamming)
+      if (this.authorRequested.has(authorId)) continue;
+      this.authorRequested.add(authorId);
+
+      this.authorCache
         .getDisplayName(authorId)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
           next: (name) => {
-            const nextMap = { ...this.authorNames() };
-            nextMap[authorId] = name;
-            this.authorNames.set(nextMap);
+            // IMPORTANT: name is string | null. Only assign if string.
+            if (!name) return;
+
+            const current = this.authorNames();
+            if (current[authorId] === name) return;
+
+            this.authorNames.set({ ...current, [authorId]: name });
           },
         });
     }
-  }
-
-  private normalizeTag(value: string): string {
-    let t = value.trim();
-    if (!t) return '';
-    if (t.startsWith('#')) t = t.slice(1).trim();
-    return t;
   }
 
   private extractProblem(err: unknown): { message: string; code: string | null } {
@@ -223,17 +202,12 @@ export class FeedPage {
 
     const message =
       (typeof problem?.detail === 'string' && problem.detail.trim()) ||
-      'Failed to load posts.';
+      'Failed to load feed.';
 
     const code =
       (typeof problem?.code === 'string' && problem.code.trim()) ||
       null;
 
     return { message, code };
-  }
-
-  private shortId(id: string): string {
-    const s = (id ?? '').trim();
-    return s.length > 10 ? `${s.slice(0, 6)}…${s.slice(-4)}` : s || 'Unknown';
   }
 }

@@ -1,0 +1,337 @@
+/* src/app/features/posts/pages/post-detail-page/post-detail-page.scss */
+
+:host {
+    display: block;
+    color: var(--foreground, #111);
+    overflow-x: clip;
+    /* hard stop for accidental horizontal scroll */
+}
+
+/* Page wrapper */
+section {
+    width: 100%;
+    max-width: 56rem;
+    margin: 0 auto;
+    padding: 1.25rem 0;
+
+    display: grid;
+    gap: 1rem;
+}
+
+/* Generic text defaults inside this page */
+p {
+    margin: 0.6rem 0;
+    line-height: 1.6;
+    color: color-mix(in oklab, var(--foreground, #111) 92%, transparent);
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+a {
+    color: color-mix(in oklab, var(--primary, #6d5efc) 85%, var(--foreground, #111));
+    text-decoration: none;
+    font-weight: 650;
+
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+/* Loading / empty / error states */
+p>strong {
+    font-weight: 750;
+}
+
+small {
+    color: color-mix(in oklab, var(--muted-foreground, #666) 92%, transparent);
+}
+
+/* Main post card */
+article {
+    border: 1px solid var(--border, rgba(0, 0, 0, 0.12));
+    border-radius: 1.25rem;
+    background: color-mix(in oklab, var(--card, #fff) 82%, transparent);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+
+    padding: 1.25rem;
+
+    box-shadow:
+        0 18px 45px color-mix(in oklab, #000 10%, transparent),
+        0 10px 28px color-mix(in oklab, var(--primary, #6d5efc) 10%, transparent);
+
+    overflow: hidden;
+
+    @media (max-width: 480px) {
+        padding: 1rem;
+        border-radius: 1.1rem;
+    }
+}
+
+h1 {
+    margin: 0 0 0.75rem 0;
+    font-size: 1.6rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--foreground, #111);
+
+    @media (max-width: 480px) {
+        font-size: 1.35rem;
+    }
+}
+
+/* Meta line (Type / Author / Created) – it’s your 1st <p> after <h1> */
+article>p:first-of-type {
+    margin-top: 0;
+    font-size: 0.92rem;
+    color: color-mix(in oklab, var(--muted-foreground, #666) 95%, transparent);
+
+    span {
+        color: color-mix(in oklab, var(--muted-foreground, #666) 70%, transparent);
+    }
+
+    strong {
+        color: color-mix(in oklab, var(--foreground, #111) 88%, transparent);
+        font-weight: 800;
+    }
+}
+
+/* Body paragraph (your 2nd <p> after meta) */
+article>p:nth-of-type(2) {
+    margin-top: 0.85rem;
+    font-size: 1rem;
+}
+
+/* Tags paragraph (if present) */
+article>p:nth-of-type(3) {
+    margin-top: 0.85rem;
+
+    /* make the hashtag spans look like soft pills */
+    span {
+        display: inline-flex;
+        align-items: center;
+        margin: 0.15rem 0.25rem 0 0;
+        padding: 0.25rem 0.55rem;
+        border-radius: 999px;
+
+        border: 1px solid color-mix(in oklab, var(--primary, #6d5efc) 18%, var(--border, #ccc));
+        background: color-mix(in oklab, var(--primary, #6d5efc) 8%, transparent);
+        color: color-mix(in oklab, var(--primary, #6d5efc) 82%, var(--foreground, #111));
+        font-size: 0.82rem;
+        font-weight: 750;
+    }
+}
+
+/* Buttons (like / add comment / delete / load more) */
+button {
+    border: 1px solid var(--border, rgba(0, 0, 0, 0.12));
+    background: color-mix(in oklab, var(--muted, #f2f2f4) 55%, transparent);
+    color: color-mix(in oklab, var(--foreground, #111) 90%, transparent);
+
+    border-radius: 999px;
+    padding: 0.6rem 1rem;
+    font-weight: 750;
+    font-size: 0.92rem;
+
+    cursor: pointer;
+    user-select: none;
+
+    transition: transform 120ms ease, background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+
+    &:hover {
+        background: color-mix(in oklab, var(--muted, #f2f2f4) 75%, transparent);
+        border-color: color-mix(in oklab, var(--primary, #6d5efc) 25%, var(--border, #ccc));
+        box-shadow: 0 14px 28px color-mix(in oklab, var(--primary, #6d5efc) 10%, transparent);
+    }
+
+    &:active {
+        transform: translateY(1px);
+    }
+
+    &:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+}
+
+/* Like block (the <div> after tags) */
+article>div:first-of-type {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+
+    margin-top: 0.85rem;
+
+    span {
+        color: color-mix(in oklab, var(--muted-foreground, #666) 92%, transparent);
+        font-size: 0.9rem;
+    }
+}
+
+/* Separator */
+hr {
+    border: 0;
+    height: 1px;
+    margin: 1.25rem 0;
+    background: color-mix(in oklab, var(--border, rgba(0, 0, 0, 0.12)) 70%, transparent);
+}
+
+/* Comments section card-in-card */
+article>section {
+    display: grid;
+    gap: 0.9rem;
+
+    h2 {
+        margin: 0;
+        font-size: 1.15rem;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+    }
+}
+
+/* Error inside comments */
+article>section>p>strong {
+    color: color-mix(in oklab, var(--destructive, #d32f2f) 85%, var(--foreground, #111));
+}
+
+/* Comment composer (textarea + button) is the first <div> in comments section */
+article>section>div:first-of-type {
+    border: 1px solid var(--border, rgba(0, 0, 0, 0.12));
+    border-radius: 1.25rem;
+    padding: 1rem;
+    background: color-mix(in oklab, var(--card, #fff) 75%, transparent);
+
+    display: grid;
+    gap: 0.75rem;
+
+    textarea {
+        width: 100%;
+        min-height: 6.5rem;
+        resize: vertical;
+
+        border-radius: 1rem;
+        border: 1px solid var(--border, rgba(0, 0, 0, 0.12));
+        background: color-mix(in oklab, var(--muted, #f2f2f4) 55%, transparent);
+        color: var(--foreground, #111);
+
+        padding: 0.85rem 0.95rem;
+        outline: none;
+
+        transition: border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+
+        &::placeholder {
+            color: color-mix(in oklab, var(--muted-foreground, #666) 70%, transparent);
+        }
+
+        &:focus {
+            border-color: color-mix(in oklab, var(--primary, #6d5efc) 45%, var(--border, #ccc));
+            background: var(--card, #fff);
+            box-shadow: 0 0 0 4px color-mix(in oklab, var(--primary, #6d5efc) 18%, transparent);
+        }
+    }
+
+    /* composer action row (button + “Sending…”) */
+    button {
+        width: fit-content;
+        background: color-mix(in oklab, var(--primary, #6d5efc) 90%, transparent);
+        border-color: color-mix(in oklab, var(--primary, #6d5efc) 40%, var(--border, #ccc));
+        color: var(--primary-foreground, #fff);
+
+        &:hover {
+            filter: brightness(1.03);
+        }
+    }
+
+    span {
+        color: color-mix(in oklab, var(--muted-foreground, #666) 92%, transparent);
+        font-size: 0.9rem;
+    }
+
+    @media (max-width: 480px) {
+        padding: 0.9rem;
+        border-radius: 1.1rem;
+
+        button {
+            width: 100%;
+            justify-self: stretch;
+        }
+    }
+}
+
+/* Comments list wrapper is the second <div> in comments section */
+article>section>div:last-of-type {
+    display: grid;
+    gap: 0.75rem;
+}
+
+/* Each comment “card” (div produced by @for) */
+article>section>div:last-of-type>div {
+    border: 1px solid var(--border, rgba(0, 0, 0, 0.12));
+    border-radius: 1.25rem;
+    padding: 1rem;
+    background: color-mix(in oklab, var(--card, #fff) 78%, transparent);
+
+    box-shadow: 0 10px 25px color-mix(in oklab, #000 7%, transparent);
+
+    p:first-of-type {
+        margin: 0;
+        display: flex;
+        align-items: baseline;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+
+        strong {
+            font-weight: 850;
+            color: var(--foreground, #111);
+        }
+
+        small {
+            margin-left: auto;
+            font-size: 0.82rem;
+            color: color-mix(in oklab, var(--muted-foreground, #666) 92%, transparent);
+        }
+    }
+
+    p:nth-of-type(2) {
+        margin-top: 0.6rem;
+        margin-bottom: 0;
+    }
+
+    button {
+        margin-top: 0.75rem;
+        background: color-mix(in oklab, var(--destructive, #d32f2f) 14%, transparent);
+        border-color: color-mix(in oklab, var(--destructive, #d32f2f) 35%, var(--border, #ccc));
+        color: color-mix(in oklab, var(--destructive, #d32f2f) 90%, var(--foreground, #111));
+
+        &:hover {
+            background: color-mix(in oklab, var(--destructive, #d32f2f) 18%, transparent);
+        }
+    }
+
+    hr {
+        margin: 0.9rem 0 0 0;
+    }
+
+    @media (max-width: 480px) {
+        border-radius: 1.1rem;
+        padding: 0.9rem;
+
+        p:first-of-type small {
+            margin-left: 0;
+            /* avoid awkward wrap on tiny screens */
+        }
+
+        button {
+            width: 100%;
+        }
+    }
+}
+
+/* “Load more comments” button (it’s a button inside the list wrapper, after comment cards) */
+article>section>div:last-of-type>button {
+    justify-self: center;
+    background: transparent;
+}

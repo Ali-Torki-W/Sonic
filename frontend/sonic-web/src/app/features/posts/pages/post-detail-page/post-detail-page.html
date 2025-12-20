@@ -1,1 +1,98 @@
-<p>post-detail-page works!</p>
+<section>
+    @if (loadingPost()) {
+    <p>Loading post...</p>
+    } @else if (postError()) {
+    <p><strong>Error:</strong> {{ postError() }}</p>
+    @if (postErrorCode()) {
+    <p><small>code: {{ postErrorCode() }}</small></p>
+    }
+    <p><a routerLink="/feed">Back to feed</a></p>
+    } @else if (post()) {
+    <article>
+        <h1>{{ post()!.title }}</h1>
+
+        <p>
+            <strong>Type:</strong> {{ post()!.type }}
+            <span> · </span>
+            <strong>Author:</strong> {{ authorDisplayName() ?? '…' }}
+            <span> · </span>
+            <strong>Created:</strong> {{ post()!.createdAt | date:'medium' }}
+        </p>
+
+        <p>{{ post()!.body }}</p>
+
+        @if (post()!.tags.length > 0) {
+        <p>
+            <strong>Tags:</strong>
+            @for (t of post()!.tags; track t) {
+            <span>#{{ t }} </span>
+            }
+        </p>
+        }
+
+        <div>
+            <button type="button" (click)="toggleLike()" [disabled]="likeBusy()">
+                @if (liked() === true) { Unlike } @else { Like }
+                ({{ likeCount() }})
+            </button>
+            @if (likeBusy()) { <span> Working...</span> }
+        </div>
+
+        <hr />
+
+        <section>
+            <h2>Comments</h2>
+
+            @if (commentsError()) {
+            <p><strong>Error:</strong> {{ commentsError() }}</p>
+            @if (commentsErrorCode()) {
+            <p><small>code: {{ commentsErrorCode() }}</small></p>
+            }
+            }
+
+            <div>
+                <textarea rows="3" [value]="commentDraft()" (input)="commentDraft.set(($any($event.target)).value)"
+                    placeholder="Write a comment..."></textarea>
+
+                <button type="button" (click)="addComment()" [disabled]="commentBusy() || !commentDraft().trim()">
+                    Add comment
+                </button>
+
+                @if (commentBusy()) { <span> Sending...</span> }
+            </div>
+
+            <div>
+                @if (loadingComments() && comments().length === 0) {
+                <p>Loading comments...</p>
+                } @else if (comments().length === 0) {
+                <p>No comments yet.</p>
+                } @else {
+                @for (c of comments(); track c.id) {
+                <div>
+                    <p>
+                        <strong>{{ c.authorDisplayName ?? c.authorId }}</strong>
+                        <span> · </span>
+                        <small>{{ c.createdAt | date:'medium' }}</small>
+                    </p>
+
+                    <p>{{ c.body }}</p>
+
+                    @if (canDeleteComment(c)) {
+                    <button type="button" (click)="deleteComment(c.id)">Delete</button>
+                    }
+
+                    <hr />
+                </div>
+                }
+
+                @if (canLoadMoreComments()) {
+                <button type="button" (click)="loadMoreComments()" [disabled]="loadingComments()">
+                    Load more comments
+                </button>
+                }
+                }
+            </div>
+        </section>
+    </article>
+    }
+</section>
