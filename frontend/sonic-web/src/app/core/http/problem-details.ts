@@ -5,6 +5,9 @@ export interface ProblemDetails {
     detail?: string;
     instance?: string;
 
-    // stable custom extension key
+    // backend sometimes uses this custom field
     code?: string;
+
+    // Validation payloads (common shape)
+    errors?: Record<string, string[]>;
 }

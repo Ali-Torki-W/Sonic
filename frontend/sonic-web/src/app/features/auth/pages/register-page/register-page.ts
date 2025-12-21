@@ -3,6 +3,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { AuthStateService } from '../../../../core/auth/auth-state.service';
 import type { ProblemDetails } from '../../../../core/http/problem-details';
@@ -22,6 +23,10 @@ export class RegisterPage {
   private readonly authState = inject(AuthStateService);
   private readonly router = inject(Router);
   private readonly activatedRoute = inject(ActivatedRoute);
+  private readonly snack = inject(MatSnackBar);
+
+  private readonly emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  private readonly passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,64}$/;
 
   readonly displayName = signal('');
   readonly email = signal('');
@@ -38,21 +43,44 @@ export class RegisterPage {
     return p.length > 0 && c.length > 0 && p !== c;
   });
 
-  readonly canSubmit = computed(() => {
-    if (this.loading()) return false;
-    if (this.passwordMismatch()) return false;
-    return this.displayName().trim().length > 0
-      && this.email().trim().length > 0
-      && this.password().length > 0
-      && this.confirmPassword().length > 0;
+  readonly emailInvalid = computed(() => {
+    const e = this.email().trim();
+    return e.length > 0 && !this.emailRegex.test(e);
   });
+
+  readonly passwordInvalid = computed(() => {
+    const p = this.password();
+    return p.length > 0 && !this.passwordRegex.test(p);
+  });
+
+  readonly clientValidationError = computed((): string | null => {
+    if (this.displayName().trim().length === 0) return 'Display name is required.';
+    if (this.email().trim().length === 0) return 'Email is required.';
+    if (this.emailInvalid()) return 'Email is invalid (example: name@domain.com).';
+    if (this.password().length === 0) return 'Password is required.';
+    if (this.passwordInvalid()) return 'Password must be 8-64 chars and include uppercase, lowercase, and a number.';
+    if (this.confirmPassword().length === 0) return 'Confirm password is required.';
+    if (this.passwordMismatch()) return 'Passwords do not match.';
+    return null;
+  });
+
+  // readonly canSubmit = computed(() => {
+  //   if (this.loading()) return false;
+  //   return this.clientValidationError() === null;
+  // });
 
   togglePassword(): void {
     this.showPassword.update(v => !v);
   }
 
   async submit(): Promise<void> {
-    if (!this.canSubmit()) return;
+    // Don’t fail silently
+    const clientErr = this.clientValidationError();
+    if (clientErr) {
+      this.error.set(clientErr);
+      this.snack.open(clientErr, 'OK', { duration: 3500 });
+      return;
+    }
 
     this.error.set(null);
     this.loading.set(true);
@@ -72,13 +100,24 @@ export class RegisterPage {
       const returnUrl = this.activatedRoute.snapshot.queryParamMap.get('returnUrl') ?? '/feed';
       await this.router.navigateByUrl(returnUrl);
     } catch (err: any) {
+      // HttpClient "status 0" is network/CORS
       if (err?.status === 0) {
-        this.error.set('Network/CORS error: cannot reach API.');
+        const msg = 'Network/CORS error: cannot reach API.';
+        this.error.set(msg);
+        this.snack.open(msg, 'OK', { duration: 3500 });
         return;
       }
 
       const pd = this.tryReadProblemDetails(err);
-      this.error.set(pd?.detail ?? 'Registration failed.');
+      const msg =
+        firstValidationMessage(pd) ??
+        (pd?.detail?.trim() ? pd.detail.trim() : null) ??
+        (pd?.title?.trim() ? pd.title.trim() : null) ??
+        statusFallback(err?.status) ??
+        'Registration failed.';
+
+      this.error.set(msg);
+      this.snack.open(msg, 'OK', { duration: 4500 });
     } finally {
       this.loading.set(false);
     }
@@ -92,11 +131,31 @@ export class RegisterPage {
       try {
         return JSON.parse(body) as ProblemDetails;
       } catch {
-        return null;
+        // If it's plain text from backend, treat it as detail
+        return { detail: body } as ProblemDetails;
       }
     }
 
     if (typeof body === 'object') return body as ProblemDetails;
     return null;
   }
+}
+
+function firstValidationMessage(pd: ProblemDetails | null): string | null {
+  const errors = pd?.errors;
+  if (!errors) return null;
+
+  const keys = Object.keys(errors);
+  if (keys.length === 0) return null;
+
+  const firstKey = keys[0];
+  const firstMsg = errors[firstKey]?.[0];
+  return (typeof firstMsg === 'string' && firstMsg.trim()) ? firstMsg.trim() : null;
+}
+
+function statusFallback(status: number | null | undefined): string | null {
+  if (status === 400) return 'Invalid registration data.';
+  if (status === 401) return 'Unauthorized. Please log in.';
+  if (status === 403) return 'Forbidden.';
+  return null;
 }

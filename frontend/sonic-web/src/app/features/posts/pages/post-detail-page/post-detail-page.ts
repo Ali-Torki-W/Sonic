@@ -1,8 +1,10 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { distinctUntilChanged, filter, map } from 'rxjs/operators';
+import { MatSnackBar } from '@angular/material/snack-bar';
+
 import { PostResponse } from '../../../../shared/contracts/post/post-response';
 import { CommentResponse } from '../../../../shared/contracts/comment/create-comment.response';
 import { CreateCommentRequest } from '../../../../shared/contracts/comment/create-comment-request';
@@ -27,6 +29,8 @@ type ApiProblem = {
 })
 export class PostDetailPage {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly snack = inject(MatSnackBar);
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly posts = inject(PostsService);
@@ -109,6 +113,7 @@ export class PostDetailPage {
           this.likeBusy.set(false);
         },
         error: (err: unknown) => {
+          this.handleAuthErrors(err, 'Please sign in to like posts.');
           const { message, code } = this.extractProblem(err);
           this.postError.set(message);
           this.postErrorCode.set(code);
@@ -138,6 +143,7 @@ export class PostDetailPage {
           this.resetAndLoadComments();
         },
         error: (err: unknown) => {
+          this.handleAuthErrors(err, 'Please sign in to comment.');
           const { message, code } = this.extractProblem(err);
           this.commentsError.set(message);
           this.commentsErrorCode.set(code);
@@ -164,6 +170,7 @@ export class PostDetailPage {
           this.commentsTotalItems.set(Math.max(0, this.commentsTotalItems() - 1));
         },
         error: (err: unknown) => {
+          this.handleAuthErrors(err, 'Please sign in to manage comments.');
           const { message, code } = this.extractProblem(err);
           this.commentsError.set(message);
           this.commentsErrorCode.set(code);
@@ -248,17 +255,49 @@ export class PostDetailPage {
       });
   }
 
+  private handleAuthErrors(err: unknown, unauthorizedMsg: string): void {
+    const status = (err as any)?.status;
+    if (status === 401) {
+      this.snack.open(unauthorizedMsg, 'OK', { duration: 3500 });
+      this.router.navigate(['/account/login'], {
+        queryParams: { returnUrl: this.router.url, reason: 'auth-required' },
+      });
+    } else if (status === 403) {
+      this.snack.open('You do not have permission to do this.', 'OK', { duration: 3500 });
+    }
+  }
+
   private extractProblem(err: unknown): { message: string; code: string | null } {
     const anyErr = err as any;
-    const problem: ApiProblem | undefined = anyErr?.error;
 
-    const message =
-      (typeof problem?.detail === 'string' && problem.detail.trim()) ||
-      'Request failed.';
+    const status: number | null =
+      typeof anyErr?.status === 'number' ? anyErr.status : null;
 
-    const code =
-      (typeof problem?.code === 'string' && problem.code.trim()) ||
-      null;
+    const problem: ApiProblem | string | undefined = anyErr?.error;
+
+    let message = 'Request failed.';
+    let code: string | null = null;
+
+    if (typeof problem === 'string' && problem.trim()) {
+      message = problem.trim();
+    } else if (problem && typeof problem === 'object') {
+      message =
+        (typeof problem.detail === 'string' && problem.detail.trim()) ||
+        (typeof problem.title === 'string' && problem.title.trim()) ||
+        message;
+
+      code =
+        (typeof problem.code === 'string' && problem.code.trim()) ||
+        null;
+    }
+
+    if ((message === 'Request failed.' || !message.trim()) && status !== null) {
+      if (status === 401) message = 'Unauthorized. Please log in and try again.';
+      else if (status === 403) message = 'Forbidden. You do not have permission.';
+      else if (status === 0) message = 'Network/CORS error: cannot reach API.';
+    }
+
+    if (!code && status !== null) code = String(status);
 
     return { message, code };
   }
