@@ -25,6 +25,7 @@
             <a class="btn btn--ghost" routerLink="/account/login">Login</a>
             <a class="btn btn--solid" routerLink="/account/register">Register</a>
             } @else {
+            <a class="btn btn--ghost" routerLink="/posts/new">Create</a>
             <a class="btn btn--ghost" routerLink="/profile">Profile</a>
             <button class="btn btn--solid" type="button" (click)="logout()">Logout</button>
             }
@@ -54,6 +55,7 @@
                 <a class="btn btn--ghost btn--block" routerLink="/account/login" (click)="closeMobile()">Login</a>
                 <a class="btn btn--solid btn--block" routerLink="/account/register" (click)="closeMobile()">Register</a>
                 } @else {
+                <a class="btn btn--ghost btn--block" routerLink="/posts/new" (click)="closeMobile()">Create</a>
                 <a class="btn btn--ghost btn--block" routerLink="/profile" (click)="closeMobile()">Profile</a>
                 <button class="btn btn--solid btn--block" type="button" (click)="logout()">Logout</button>
                 }
