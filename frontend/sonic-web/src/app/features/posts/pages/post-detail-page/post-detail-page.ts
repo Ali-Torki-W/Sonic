@@ -2,15 +2,14 @@ import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { DatePipe } from '@angular/common';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { distinctUntilChanged, filter, map } from 'rxjs/operators';
-import { MatSnackBar } from '@angular/material/snack-bar';
 
 import { PostResponse } from '../../../../shared/contracts/post/post-response';
 import { CommentResponse } from '../../../../shared/contracts/comment/create-comment.response';
 import { CreateCommentRequest } from '../../../../shared/contracts/comment/create-comment-request';
+import { PostType } from '../../../../shared/contracts/post/post-type';
+
 import { PostsService } from '../../../../core/posts/post-service';
 import { CommentsService } from '../../../../core/comments/comment-service';
-import { UsersService } from '../../../../core/users/user-service';
 import { AuthorDisplayNameCache } from '../../../../core/users/author-name-cache';
 
 type ApiProblem = {
@@ -30,275 +29,374 @@ type ApiProblem = {
 export class PostDetailPage {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
-  private readonly snack = inject(MatSnackBar);
+  private readonly posts = inject(PostsService);
+  private readonly comments = inject(CommentsService);
+  private readonly authorNames = inject(AuthorDisplayNameCache);
   private readonly destroyRef = inject(DestroyRef);
 
-  private readonly posts = inject(PostsService);
-  private readonly commentsApi = inject(CommentsService);
-  private readonly users = inject(UsersService);
-  private readonly authorCache = inject(AuthorDisplayNameCache);
+  // ---- ids
+  readonly postId = signal<string>('');
 
-  readonly postId = signal<string | null>(null);
-
-  readonly currentUserId = signal<string | null>(null);
-  readonly currentUserRole = signal<string | null>(null);
-  readonly isAdmin = computed(() => this.currentUserRole() === 'Admin');
-
-  readonly loadingPost = signal(false);
+  // ---- post
+  readonly postLoading = signal(false);
   readonly postError = signal<string | null>(null);
   readonly postErrorCode = signal<string | null>(null);
   readonly post = signal<PostResponse | null>(null);
 
-  readonly authorDisplayName = signal<string | null>(null);
-
+  // ---- like (UX)
   readonly likeBusy = signal(false);
-  readonly likeCount = signal(0);
-  readonly liked = signal<boolean | null>(null);
+  readonly liked = signal(false);
+  readonly likeToast = signal<string | null>(null);
+  readonly likeError = signal<string | null>(null);
+  readonly likeErrorCode = signal<string | null>(null);
+  readonly likeNeedsLogin = signal(false);
 
-  readonly loadingComments = signal(false);
+  // ---- author display names (resolved -> stored as strings only)
+  readonly authorNameMap = signal<Record<string, string>>({});
+
+  // ---- comments (paged)
+  readonly commentsLoading = signal(false);
   readonly commentsError = signal<string | null>(null);
   readonly commentsErrorCode = signal<string | null>(null);
 
   readonly commentsPage = signal(1);
   readonly commentsPageSize = signal(20);
   readonly commentsTotalItems = signal(0);
-  readonly comments = signal<readonly CommentResponse[]>([]);
-  readonly canLoadMoreComments = computed(() => this.comments().length < this.commentsTotalItems());
+  readonly commentItems = signal<readonly CommentResponse[]>([]);
 
+  readonly canLoadMoreComments = computed(
+    () => this.commentItems().length < this.commentsTotalItems()
+  );
+
+  // ---- create comment
   readonly commentDraft = signal('');
-  readonly commentBusy = signal(false);
+  readonly creatingComment = signal(false);
+
+  // ---- derived
+  readonly isCampaign = computed(() => this.post()?.type === PostType.Campaign);
 
   constructor() {
-    this.users.getMe()
+    const id = this.route.snapshot.paramMap.get('id');
+    if (!id) {
+      this.router.navigate(['/not-found']);
+      return;
+    }
+
+    this.postId.set(id);
+    this.loadPost();
+    this.refreshComments();
+  }
+
+  // --------------------
+  // navigation
+  // --------------------
+  backToFeed(): void {
+    this.router.navigate(['/feed']);
+  }
+
+  goToLogin(): void {
+    // Keep it simple + useful: come back here after login
+    this.router.navigate(['/account/login'], {
+      queryParams: { returnUrl: this.router.url },
+    });
+  }
+
+  // --------------------
+  // post
+  // --------------------
+  private loadPost(): void {
+    const id = this.postId();
+
+    this.postLoading.set(true);
+    this.postError.set(null);
+    this.postErrorCode.set(null);
+
+    this.posts
+      .getById(id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (me) => {
-          this.currentUserId.set(me.id);
-          this.currentUserRole.set(me.role);
+        next: (p) => {
+          this.post.set(p);
+          this.postLoading.set(false);
+
+          // resolve author name
+          this.resolveAuthorName(p.authorId);
+
+          // reload-safe: ask backend if CURRENT user likes it
+          this.loadLikeStatus();
         },
-        error: () => {
-          this.currentUserId.set(null);
-          this.currentUserRole.set(null);
+        error: (err: unknown) => {
+          const { message, code } = this.extractProblem(err);
+          this.postError.set(message);
+          this.postErrorCode.set(code);
+          this.postLoading.set(false);
         },
       });
+  }
 
-    this.route.paramMap
-      .pipe(
-        map(pm => (pm.get('id') ?? '').trim()),
-        filter(id => id.length > 0),
-        distinctUntilChanged(),
-        takeUntilDestroyed(this.destroyRef)
-      )
+  private loadLikeStatus(): void {
+    const id = this.postId();
+    if (!id) return;
+
+    this.posts
+      .getLikeStatus(id) // MUST exist in PostsService
+      .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (id) => {
-          this.postId.set(id);
-          this.loadPost(id);
-          this.resetAndLoadComments();
+        next: (resp) => {
+          this.liked.set(!!resp.liked);
+
+          // keep count aligned too (optional but consistent)
+          const p = this.post();
+          if (p) {
+            this.post.set({ ...p, likeCount: Number(resp.likeCount) });
+          }
+        },
+        error: (err: unknown) => {
+          // If unauth → keep silent and just show unliked UI
+          const status = this.getHttpStatus(err);
+          if (status === 401 || status === 403) {
+            this.liked.set(false);
+            return;
+          }
+          // Any other error: ignore (detail page still works)
         },
       });
   }
 
   toggleLike(): void {
-    const id = this.postId();
-    if (!id || this.likeBusy()) return;
+    const p = this.post();
+    if (!p || this.likeBusy()) return;
 
     this.likeBusy.set(true);
+    this.likeToast.set(null);
+    this.likeError.set(null);
+    this.likeErrorCode.set(null);
+    this.likeNeedsLogin.set(false);
 
-    this.posts.toggleLike(id)
+    this.posts
+      .toggleLike(p.id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (resp) => {
-          this.likeCount.set(resp.likeCount);
-          this.liked.set(resp.liked);
+          const nowLiked = !!resp.liked;
+
+          this.liked.set(nowLiked);
+          this.post.set({
+            ...p,
+            likeCount: Number(resp.likeCount),
+          });
+
           this.likeBusy.set(false);
+
+          // Toast
+          this.likeToast.set(nowLiked ? 'Added to likes.' : 'Removed from likes.');
+          window.setTimeout(() => {
+            // avoid clearing a newer toast
+            this.likeToast.set(null);
+          }, 1800);
         },
         error: (err: unknown) => {
-          this.handleAuthErrors(err, 'Please sign in to like posts.');
+          const status = this.getHttpStatus(err);
+
+          // UX: unauth → show login CTA
+          if (status === 401 || status === 403) {
+            const { message, code } = this.extractProblem(err);
+
+            this.likeError.set(message || 'Please login to like posts.');
+            this.likeErrorCode.set(code ?? 'auth.unauthorized');
+            this.likeNeedsLogin.set(true);
+            this.likeBusy.set(false);
+            return;
+          }
+
           const { message, code } = this.extractProblem(err);
-          this.postError.set(message);
-          this.postErrorCode.set(code);
+          this.likeError.set(message);
+          this.likeErrorCode.set(code);
           this.likeBusy.set(false);
         },
       });
   }
 
-  addComment(): void {
+  // --------------------
+  // comments (paging)
+  // --------------------
+  refreshComments(): void {
+    this.commentsPage.set(1);
+    this.commentItems.set([]);
+    this.fetchComments({ append: false });
+  }
+
+  loadMoreComments(): void {
+    if (this.commentsLoading() || !this.canLoadMoreComments()) return;
+
+    this.commentsPage.set(this.commentsPage() + 1);
+    this.fetchComments({ append: true });
+  }
+
+  private fetchComments(opts: { append: boolean }): void {
+    const postId = this.postId();
+
+    this.commentsLoading.set(true);
+    this.commentsError.set(null);
+    this.commentsErrorCode.set(null);
+
+    this.comments
+      .getForPost(postId, this.commentsPage(), this.commentsPageSize())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (result) => {
+          const incoming = result.items ?? [];
+          const nextItems = opts.append ? [...this.commentItems(), ...incoming] : incoming;
+
+          this.commentItems.set(nextItems);
+          this.commentsTotalItems.set(result.totalItems ?? 0);
+          this.commentsLoading.set(false);
+
+          for (const c of incoming) {
+            if (c.authorDisplayName && c.authorDisplayName.trim()) {
+              this.setAuthorName(c.authorId, c.authorDisplayName.trim());
+            } else {
+              this.resolveAuthorName(c.authorId);
+            }
+          }
+        },
+        error: (err: unknown) => {
+          const { message, code } = this.extractProblem(err);
+          this.commentsError.set(message);
+          this.commentsErrorCode.set(code);
+          this.commentsLoading.set(false);
+        },
+      });
+  }
+
+  // --------------------
+  // create/delete comment
+  // --------------------
+  submitComment(): void {
     const postId = this.postId();
     const body = this.commentDraft().trim();
-    if (!postId || this.commentBusy()) return;
-    if (!body) return;
+    if (!body || this.creatingComment()) return;
 
-    this.commentBusy.set(true);
+    this.creatingComment.set(true);
     this.commentsError.set(null);
     this.commentsErrorCode.set(null);
 
     const req: CreateCommentRequest = { body };
 
-    this.commentsApi.create(postId, req)
+    this.comments
+      .create(postId, req)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: () => {
+        next: (created) => {
           this.commentDraft.set('');
-          this.commentBusy.set(false);
-          this.resetAndLoadComments();
+          this.creatingComment.set(false);
+
+          this.commentItems.set([created, ...this.commentItems()]);
+          this.commentsTotalItems.set(this.commentsTotalItems() + 1);
+
+          if (created.authorDisplayName && created.authorDisplayName.trim()) {
+            this.setAuthorName(created.authorId, created.authorDisplayName.trim());
+          } else {
+            this.resolveAuthorName(created.authorId);
+          }
         },
         error: (err: unknown) => {
-          this.handleAuthErrors(err, 'Please sign in to comment.');
           const { message, code } = this.extractProblem(err);
           this.commentsError.set(message);
           this.commentsErrorCode.set(code);
-          this.commentBusy.set(false);
+          this.creatingComment.set(false);
         },
       });
-  }
-
-  loadMoreComments(): void {
-    if (this.loadingComments() || !this.canLoadMoreComments()) return;
-    this.commentsPage.set(this.commentsPage() + 1);
-    this.loadComments({ append: true });
   }
 
   deleteComment(commentId: string): void {
     const id = (commentId ?? '').trim();
     if (!id) return;
 
-    this.commentsApi.delete(id)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: () => {
-          this.comments.set(this.comments().filter(c => c.id !== id));
-          this.commentsTotalItems.set(Math.max(0, this.commentsTotalItems() - 1));
-        },
-        error: (err: unknown) => {
-          this.handleAuthErrors(err, 'Please sign in to manage comments.');
-          const { message, code } = this.extractProblem(err);
-          this.commentsError.set(message);
-          this.commentsErrorCode.set(code);
-        },
-      });
-  }
-
-  canDeleteComment(c: CommentResponse): boolean {
-    const meId = this.currentUserId();
-    if (!meId) return false;
-    return this.isAdmin() || c.authorId === meId;
-  }
-
-  private loadPost(id: string): void {
-    this.loadingPost.set(true);
-    this.postError.set(null);
-    this.postErrorCode.set(null);
-    this.post.set(null);
-    this.authorDisplayName.set(null);
-    this.liked.set(null);
-
-    this.posts.getById(id)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (p) => {
-          this.post.set(p);
-          this.likeCount.set(p.likeCount);
-
-          this.authorCache.getDisplayName(p.authorId)
-            .pipe(takeUntilDestroyed(this.destroyRef))
-            .subscribe({
-              next: (name) => this.authorDisplayName.set(name),
-            });
-
-          this.loadingPost.set(false);
-        },
-        error: (err: unknown) => {
-          const { message, code } = this.extractProblem(err);
-          this.postError.set(message);
-          this.postErrorCode.set(code);
-          this.loadingPost.set(false);
-        },
-      });
-  }
-
-  private resetAndLoadComments(): void {
-    this.commentsPage.set(1);
-    this.comments.set([]);
-    this.commentsTotalItems.set(0);
-    this.loadComments({ append: false });
-  }
-
-  private loadComments(opts: { append: boolean }): void {
-    const postId = this.postId();
-    if (!postId) return;
-
-    this.loadingComments.set(true);
     this.commentsError.set(null);
     this.commentsErrorCode.set(null);
 
-    this.commentsApi.getForPost(postId, this.commentsPage(), this.commentsPageSize())
+    this.comments
+      .delete(id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-        next: (res) => {
-          for (const c of res.items) {
-            if (c.authorDisplayName) {
-              this.authorCache.seed(c.authorId, c.authorDisplayName);
-            }
-          }
-
-          const nextItems = opts.append ? [...this.comments(), ...res.items] : res.items;
-          this.comments.set(nextItems);
-          this.commentsTotalItems.set(res.totalItems);
-          this.loadingComments.set(false);
+        next: () => {
+          const next = this.commentItems().filter((c) => c.id !== id);
+          this.commentItems.set(next);
+          this.commentsTotalItems.set(Math.max(0, this.commentsTotalItems() - 1));
         },
         error: (err: unknown) => {
           const { message, code } = this.extractProblem(err);
           this.commentsError.set(message);
           this.commentsErrorCode.set(code);
-          this.loadingComments.set(false);
         },
       });
   }
 
-  private handleAuthErrors(err: unknown, unauthorizedMsg: string): void {
-    const status = (err as any)?.status;
-    if (status === 401) {
-      this.snack.open(unauthorizedMsg, 'OK', { duration: 3500 });
-      this.router.navigate(['/account/login'], {
-        queryParams: { returnUrl: this.router.url, reason: 'auth-required' },
-      });
-    } else if (status === 403) {
-      this.snack.open('You do not have permission to do this.', 'OK', { duration: 3500 });
-    }
+  // --------------------
+  // author display helpers
+  // --------------------
+  displayAuthorName(authorId: string): string {
+    const id = (authorId ?? '').trim();
+    if (!id) return 'Unknown';
+
+    const map = this.authorNameMap();
+    return map[id] ?? this.shortId(id);
   }
 
+  private resolveAuthorName(authorId: string): void {
+    const id = (authorId ?? '').trim();
+    if (!id) return;
+
+    if (this.authorNameMap()[id]) return;
+
+    this.authorNames
+      .getDisplayName(id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (nameOrNull) => {
+          const name = (nameOrNull ?? '').trim();
+          if (!name) return;
+          this.setAuthorName(id, name);
+        },
+      });
+  }
+
+  private setAuthorName(authorId: string, displayName: string): void {
+    const id = (authorId ?? '').trim();
+    const name = (displayName ?? '').trim();
+    if (!id || !name) return;
+
+    const next = { ...this.authorNameMap(), [id]: name };
+    this.authorNameMap.set(next);
+  }
+
+  private shortId(id: string): string {
+    return id.length > 10 ? `${id.slice(0, 6)}…${id.slice(-4)}` : id;
+  }
+
+  // --------------------
+  // errors
+  // --------------------
   private extractProblem(err: unknown): { message: string; code: string | null } {
     const anyErr = err as any;
+    const problem: ApiProblem | undefined = anyErr?.error;
 
-    const status: number | null =
-      typeof anyErr?.status === 'number' ? anyErr.status : null;
+    const message =
+      (typeof problem?.detail === 'string' && problem.detail.trim()) || 'Request failed.';
 
-    const problem: ApiProblem | string | undefined = anyErr?.error;
-
-    let message = 'Request failed.';
-    let code: string | null = null;
-
-    if (typeof problem === 'string' && problem.trim()) {
-      message = problem.trim();
-    } else if (problem && typeof problem === 'object') {
-      message =
-        (typeof problem.detail === 'string' && problem.detail.trim()) ||
-        (typeof problem.title === 'string' && problem.title.trim()) ||
-        message;
-
-      code =
-        (typeof problem.code === 'string' && problem.code.trim()) ||
-        null;
-    }
-
-    if ((message === 'Request failed.' || !message.trim()) && status !== null) {
-      if (status === 401) message = 'Unauthorized. Please log in and try again.';
-      else if (status === 403) message = 'Forbidden. You do not have permission.';
-      else if (status === 0) message = 'Network/CORS error: cannot reach API.';
-    }
-
-    if (!code && status !== null) code = String(status);
+    const code = (typeof problem?.code === 'string' && problem.code.trim()) || null;
 
     return { message, code };
+  }
+
+  private getHttpStatus(err: unknown): number | null {
+    const anyErr = err as any;
+    if (typeof anyErr?.status === 'number') return anyErr.status;
+
+    const problem: ApiProblem | undefined = anyErr?.error;
+    if (typeof problem?.status === 'number') return problem.status;
+
+    return null;
   }
 }

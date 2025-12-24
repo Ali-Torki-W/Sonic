@@ -27,4 +27,20 @@ public sealed class LikesController(ILikeService likeService) : ApiControllerBas
 
         return Ok(result);
     }
+
+    [HttpGet("posts/{postId}/like")]
+    [Authorize]
+    public async Task<ActionResult<LikeToggleResponse>> GetLikStatus(
+        string postId,
+        CancellationToken cancellationToken = default)
+    {
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrWhiteSpace(userId))
+        {
+            return Unauthorized();
+        }
+
+        var result = await _likeService.GetStatusAsync(postId, userId, cancellationToken);
+        return Ok(result);
+    }
 }

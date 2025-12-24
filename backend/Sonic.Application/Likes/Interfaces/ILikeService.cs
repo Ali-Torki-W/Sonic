@@ -8,4 +8,9 @@ public interface ILikeService
         string postId,
         string userId,
         CancellationToken cancellationToken = default);
+
+    Task<LikeToggleResponse> GetStatusAsync(
+        string postId,
+        string userId,
+        CancellationToken cancellationToken = default);
 }

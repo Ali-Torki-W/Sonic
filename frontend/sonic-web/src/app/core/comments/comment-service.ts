@@ -12,25 +12,22 @@ export class CommentsService {
     private readonly api = inject(ApiClient);
 
     getForPost(postId: string, page: number, pageSize: number): Observable<PagedResult<CommentResponse>> {
-        const id = (postId ?? '').trim();
+        const id = encodeURIComponent((postId ?? '').trim());
 
         const params = new HttpParams()
             .set('page', String(page))
             .set('pageSize', String(pageSize));
 
-        return this.api.get<PagedResult<CommentResponse>>(
-            `/posts/${encodeURIComponent(id)}/comments`,
-            params
-        );
+        return this.api.get<PagedResult<CommentResponse>>(`/posts/${id}/comments`, params);
     }
 
-    create(postId: string, req: CreateCommentRequest): Observable<CommentResponse> {
-        const id = (postId ?? '').trim();
-        return this.api.post<CommentResponse>(`/posts/${encodeURIComponent(id)}/comments`, req);
+    create(postId: string, body: CreateCommentRequest): Observable<CommentResponse> {
+        const id = encodeURIComponent((postId ?? '').trim());
+        return this.api.post<CommentResponse>(`/posts/${id}/comments`, body);
     }
 
     delete(commentId: string): Observable<void> {
-        const id = (commentId ?? '').trim();
-        return this.api.delete<void>(`/comments/${encodeURIComponent(id)}`);
+        const id = encodeURIComponent((commentId ?? '').trim());
+        return this.api.delete<void>(`/comments/${id}`);
     }
 }

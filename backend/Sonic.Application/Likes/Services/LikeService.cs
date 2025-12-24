@@ -55,4 +55,33 @@ public sealed class LikeService(
             Liked = nowLiked
         };
     }
+
+    public async Task<LikeToggleResponse> GetStatusAsync(
+            string postId,
+            string userId,
+            CancellationToken cancellationToken = default)
+    {
+        var pid = (postId ?? string.Empty).Trim();
+        var uid = (userId ?? string.Empty).Trim();
+
+        if (string.IsNullOrWhiteSpace(pid))
+        {
+            throw Errors.BadRequest("post id is required");
+        }
+
+        if (string.IsNullOrWhiteSpace(uid))
+        {
+            throw Errors.BadRequest("user id is required");
+        }
+
+        var liked = await _likeRepository.ExistsAsync(pid, uid, cancellationToken);
+        var likeCount = await _likeRepository.CountForPostAsync(pid, cancellationToken);
+
+        return new LikeToggleResponse
+        {
+            PostId = pid,
+            LikeCount = likeCount,
+            Liked = liked
+        };
+    }
 }

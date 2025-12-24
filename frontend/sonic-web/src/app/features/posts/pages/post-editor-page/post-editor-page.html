@@ -1,1 +1,105 @@
-<p>post-editor-page works!</p>
+<section class="editor">
+    <header class="editor__header">
+        <div class="editor__title">
+            <h1>@if (isEdit()) { Edit post } @else { Create post }</h1>
+            <p class="muted">
+                @if (isEdit()) { Update your post content. } @else { Share something with the community. }
+            </p>
+        </div>
+    </header>
+
+    @if (loading()) {
+    <div class="panel">
+        <p class="muted">Loading…</p>
+    </div>
+    } @else {
+    @if (apiError()) {
+    <div class="panel panel--error">
+        <p class="error-text">{{ apiError() }}</p>
+        @if (apiErrorCode()) {
+        <p class="muted">code: {{ apiErrorCode() }}</p>
+        }
+    </div>
+    }
+
+    <form class="panel" [formGroup]="form" (ngSubmit)="submit()">
+        @if (!isEdit()) {
+        <div class="field">
+            <label class="label">Post type</label>
+            <select class="input" formControlName="type">
+                @for (t of typeOptions; track t) {
+                <option [value]="t">{{ t }}</option>
+                }
+            </select>
+        </div>
+        } @else {
+        <div class="field">
+            <label class="label">Post type</label>
+            <input class="input" [value]="effectiveType()" disabled />
+        </div>
+        }
+
+        <div class="field">
+            <label class="label">Title</label>
+            <input class="input" formControlName="title" placeholder="Give your post a title…" />
+            @if (titleError()) {
+            <p class="field-error">{{ titleError() }}</p>
+            }
+        </div>
+
+        <div class="field">
+            <label class="label">Body</label>
+            <textarea class="input input--textarea" formControlName="body" rows="8"
+                placeholder="Write your post…"></textarea>
+            @if (bodyError()) {
+            <p class="field-error">{{ bodyError() }}</p>
+            }
+        </div>
+
+        <div class="field">
+            <label class="label">Tags</label>
+
+            <div class="tag-row">
+                <input class="input" [value]="tagDraft()" (input)="tagDraft.set(($any($event.target)).value)"
+                    (keydown.enter)="$event.preventDefault(); addTagFromDraft()"
+                    placeholder="Add one tag, press Enter…" />
+                <button class="btn btn--solid" type="button" (click)="addTagFromDraft()">Add</button>
+            </div>
+
+            @if (tagDraft().includes(',')) {
+            <p class="hint hint--warn">One tag at a time. No commas.</p>
+            }
+
+            @if (selectedTags().length > 0) {
+            <div class="tag-list">
+                @for (t of selectedTags(); track t) {
+                <button class="tag" type="button" (click)="removeTag(t)" title="Remove tag">
+                    #{{ t }} <span class="tag__x">×</span>
+                </button>
+                }
+            </div>
+            }
+        </div>
+
+        <div class="field">
+            <label class="label">External link (optional)</label>
+            <input class="input" formControlName="externalLink" placeholder="https://…" />
+        </div>
+
+        @if (isCampaign()) {
+        <div class="field">
+            <label class="label">Campaign goal</label>
+            <input class="input" formControlName="campaignGoal" placeholder="What is the campaign goal?" />
+            <p class="hint">Only campaigns have a goal. This field won’t exist for other post types.</p>
+        </div>
+        }
+
+        <div class="footer">
+            <button class="btn btn--ghost" type="button" (click)="cancel()">Cancel</button>
+            <button class="btn btn--solid" type="submit" [disabled]="!canSubmit()">
+                @if (saving()) { Saving… } @else { Publish }
+            </button>
+        </div>
+    </form>
+    }
+</section>

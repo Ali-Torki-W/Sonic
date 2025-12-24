@@ -22,9 +22,8 @@ export const routes: Routes = [
     // Public
     { path: 'feed', component: FeedPage },
     { path: 'campaigns', component: CampaignsPage },
-    { path: 'posts/:id', component: PostDetailPage },
 
-    // Auth required
+    // Auth required (MUST be before posts/:id)
     {
         path: '',
         runGuardsAndResolvers: 'always',
@@ -35,6 +34,9 @@ export const routes: Routes = [
             { path: 'profile', component: ProfilePage },
         ],
     },
+
+    // Public post detail (MUST be after /posts/new)
+    { path: 'posts/:id', component: PostDetailPage },
 
     // Logged-in users shouldn't hit login/register
     {

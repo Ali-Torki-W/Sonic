@@ -1,98 +1,225 @@
-<section>
-    @if (loadingPost()) {
-    <p>Loading post...</p>
-    } @else if (postError()) {
-    <p><strong>Error:</strong> {{ postError() }}</p>
-    @if (postErrorCode()) {
-    <p><small>code: {{ postErrorCode() }}</small></p>
-    }
-    <p><a routerLink="/feed">Back to feed</a></p>
-    } @else if (post()) {
-    <article>
-        <h1>{{ post()!.title }}</h1>
+<section class="pd">
+    <div class="pd__bg" aria-hidden="true"></div>
 
-        <p>
-            <strong>Type:</strong> {{ post()!.type }}
-            <span> · </span>
-            <strong>Author:</strong> {{ authorDisplayName() ?? '…' }}
-            <span> · </span>
-            <strong>Created:</strong> {{ post()!.createdAt | date:'medium' }}
-        </p>
+    <div class="pd__wrap">
+        <header class="pd__topbar">
+            <a class="pd__back" routerLink="/feed">← Back to feed</a>
+        </header>
 
-        <p>{{ post()!.body }}</p>
-
-        @if (post()!.tags.length > 0) {
-        <p>
-            <strong>Tags:</strong>
-            @for (t of post()!.tags; track t) {
-            <span>#{{ t }} </span>
-            }
-        </p>
-        }
-
-        <div>
-            <button type="button" (click)="toggleLike()" [disabled]="likeBusy()">
-                @if (liked() === true) { Unlike } @else { Like }
-                ({{ likeCount() }})
-            </button>
-            @if (likeBusy()) { <span> Working...</span> }
+        @if (postLoading()) {
+        <div class="pd__card pd__card--skeleton">
+            <div class="sk sk-title"></div>
+            <div class="sk sk-meta"></div>
+            <div class="sk sk-body"></div>
+            <div class="sk sk-body"></div>
         </div>
+        } @else {
+        @if (postError()) {
+        <div class="pd__card pd__card--error">
+            <div class="pd__errorTitle">Error</div>
+            <div class="pd__errorText">{{ postError() }}</div>
 
-        <hr />
-
-        <section>
-            <h2>Comments</h2>
-
-            @if (commentsError()) {
-            <p><strong>Error:</strong> {{ commentsError() }}</p>
-            @if (commentsErrorCode()) {
-            <p><small>code: {{ commentsErrorCode() }}</small></p>
-            }
+            @if (postErrorCode()) {
+            <div class="pd__errorCode">code: {{ postErrorCode() }}</div>
             }
 
-            <div>
-                <textarea rows="3" [value]="commentDraft()" (input)="commentDraft.set(($any($event.target)).value)"
-                    placeholder="Write a comment..."></textarea>
-
-                <button type="button" (click)="addComment()" [disabled]="commentBusy() || !commentDraft().trim()">
-                    Add comment
-                </button>
-
-                @if (commentBusy()) { <span> Sending...</span> }
+            <div class="pd__errorActions">
+                <a class="pd__btn pd__btn--ghost" routerLink="/feed">Back to feed</a>
             </div>
+        </div>
+        } @else {
+        @if (post(); as p) {
+        <!-- Post Card -->
+        <article class="pd__card pd__post">
+            <header class="pd__postHeader">
+                <div class="pd__titleRow">
+                    <h1 class="pd__title">{{ p.title }}</h1>
+                    <span class="pd__pill pd__pill--type">{{ p.type }}</span>
+                </div>
 
-            <div>
-                @if (loadingComments() && comments().length === 0) {
-                <p>Loading comments...</p>
-                } @else if (comments().length === 0) {
-                <p>No comments yet.</p>
-                } @else {
-                @for (c of comments(); track c.id) {
-                <div>
-                    <p>
-                        <strong>{{ c.authorDisplayName ?? c.authorId }}</strong>
-                        <span> · </span>
-                        <small>{{ c.createdAt | date:'medium' }}</small>
-                    </p>
+                <div class="pd__meta">
+                    <span class="pd__metaItem">
+                        <span class="pd__metaLabel">Author</span>
+                        <span class="pd__metaValue">{{ displayAuthorName(p.authorId) }}</span>
+                    </span>
 
-                    <p>{{ c.body }}</p>
+                    <span class="pd__metaDot">·</span>
 
-                    @if (canDeleteComment(c)) {
-                    <button type="button" (click)="deleteComment(c.id)">Delete</button>
+                    <span class="pd__metaItem">
+                        <span class="pd__metaLabel">Created</span>
+                        <span class="pd__metaValue">{{ p.createdAt | date:'medium' }}</span>
+                    </span>
+                </div>
+
+                @if (p.tags?.length) {
+                <div class="pd__tags">
+                    @for (t of p.tags; track t) {
+                    <span class="pd__tag">#{{ t }}</span>
                     }
-
-                    <hr />
                 </div>
                 }
+            </header>
 
-                @if (canLoadMoreComments()) {
-                <button type="button" (click)="loadMoreComments()" [disabled]="loadingComments()">
-                    Load more comments
-                </button>
+            <section class="pd__content">
+                <p class="pd__body">{{ p.body }}</p>
+
+                @if (p.externalLink) {
+                <a class="pd__link" [href]="p.externalLink" target="_blank" rel="noopener noreferrer">
+                    Open external link →
+                </a>
                 }
+            </section>
+
+            @if (isCampaign()) {
+            <section class="pd__campaign">
+                <div class="pd__campaignTitle">Campaign</div>
+                <div class="pd__campaignGrid">
+                    <div class="pd__campaignItem">
+                        <div class="pd__campaignLabel">Goal</div>
+                        <div class="pd__campaignValue">{{ p.campaignGoal }}</div>
+                    </div>
+                    <div class="pd__campaignItem">
+                        <div class="pd__campaignLabel">Participants</div>
+                        <div class="pd__campaignValue">{{ p.participantsCount }}</div>
+                    </div>
+                </div>
+            </section>
+            }
+
+            <footer class="pd__actions">
+                <button type="button" class="pd__btn pd__btn--like" (click)="toggleLike()" [disabled]="likeBusy()">
+                    <span class="pd__btnIcon" aria-hidden="true">
+                        @if (liked()) { ♥ } @else { ♡ }
+                    </span>
+
+                    <span class="pd__btnText">
+                        @if (likeBusy()) { Working… }
+                        @else { @if (liked()) { Liked } @else { Like } }
+                    </span>
+
+                    <span class="pd__btnCount">{{ p.likeCount }}</span>
+                </button>
+
+                @if (likeToast()) {
+                <span class="pd__hint">{{ likeToast() }}</span>
+                }
+
+                @if (likeError()) {
+                <div class="pd__inlineError pd__inlineError--like">
+                    <div class="pd__inlineErrorText">{{ likeError() }}</div>
+
+                    @if (likeErrorCode()) {
+                    <div class="pd__inlineErrorCode">code: {{ likeErrorCode() }}</div>
+                    }
+
+                    @if (likeNeedsLogin()) {
+                    <div class="pd__inlineErrorActions">
+                        <button type="button" class="pd__btn pd__btn--solid" (click)="goToLogin()">
+                            Login
+                        </button>
+                    </div>
+                    }
+                </div>
+                }
+            </footer>
+        </article>
+
+        <!-- Comments -->
+        <section class="pd__card pd__comments">
+            <header class="pd__sectionHeader">
+                <h2 class="pd__sectionTitle">Comments</h2>
+                <span class="pd__sectionMeta">{{ commentsTotalItems() }} total</span>
+            </header>
+
+            @if (commentsError()) {
+            <div class="pd__inlineError">
+                <div class="pd__inlineErrorText">{{ commentsError() }}</div>
+                @if (commentsErrorCode()) {
+                <div class="pd__inlineErrorCode">code: {{ commentsErrorCode() }}</div>
                 }
             </div>
+            }
+
+            <!-- Create Comment -->
+            <div class="pd__composer">
+                <div class="pd__composerHead">
+                    <div class="pd__composerTitle">Write a comment</div>
+                    <div class="pd__composerHint">Be specific. No spam.</div>
+                </div>
+
+                <textarea class="pd__textarea" rows="3" [value]="commentDraft()"
+                    (input)="commentDraft.set(($any($event.target)).value)" placeholder="What do you think?"></textarea>
+
+                <div class="pd__composerActions">
+                    <button type="button" class="pd__btn pd__btn--primary" (click)="submitComment()"
+                        [disabled]="creatingComment() || !commentDraft().trim()">
+                        @if (creatingComment()) { Posting… } @else { Post comment }
+                    </button>
+                </div>
+            </div>
+
+            <!-- Comments list -->
+            @if (commentsLoading() && commentItems().length === 0) {
+            <div class="pd__listSkeleton">
+                <div class="sk sk-cm"></div>
+                <div class="sk sk-cm"></div>
+                <div class="sk sk-cm"></div>
+            </div>
+            } @else {
+            @if (commentItems().length === 0) {
+            <div class="pd__empty">
+                <div class="pd__emptyTitle">No comments yet</div>
+                <div class="pd__emptyText">Be the first to add something useful.</div>
+            </div>
+            } @else {
+            <ul class="pd__list">
+                @for (c of commentItems(); track c.id) {
+                <li class="pd__comment">
+                    <header class="pd__commentHead">
+                        <div class="pd__commentAuthor">
+                            <span class="pd__avatar" aria-hidden="true">
+                                @if (c.authorDisplayName) {
+                                {{ c.authorDisplayName.slice(0, 1).toUpperCase() }}
+                                } @else {
+                                {{ displayAuthorName(c.authorId).slice(0, 1).toUpperCase() }}
+                                }
+                            </span>
+
+                            <div class="pd__commentAuthorText">
+                                <div class="pd__commentName">
+                                    @if (c.authorDisplayName) {
+                                    {{ c.authorDisplayName }}
+                                    } @else {
+                                    {{ displayAuthorName(c.authorId) }}
+                                    }
+                                </div>
+                                <div class="pd__commentTime">{{ c.createdAt | date:'short' }}</div>
+                            </div>
+                        </div>
+
+                        <button type="button" class="pd__btn pd__btn--dangerGhost" (click)="deleteComment(c.id)">
+                            Delete
+                        </button>
+                    </header>
+
+                    <p class="pd__commentBody">{{ c.body }}</p>
+                </li>
+                }
+            </ul>
+
+            @if (canLoadMoreComments()) {
+            <div class="pd__loadMore">
+                <button type="button" class="pd__btn pd__btn--ghost" (click)="loadMoreComments()"
+                    [disabled]="commentsLoading()">
+                    @if (commentsLoading()) { Loading… } @else { Load more }
+                </button>
+            </div>
+            }
+            }
+            }
         </section>
-    </article>
-    }
+        }
+        }
+        }
+    </div>
 </section>
