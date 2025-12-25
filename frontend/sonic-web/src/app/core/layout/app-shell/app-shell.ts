@@ -1,6 +1,17 @@
-import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import {
+  AfterViewInit,
+  ChangeDetectionStrategy,
+  Component,
+  DestroyRef,
+  computed,
+  effect,
+  inject,
+  signal,
+} from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+
 import { AuthStateService } from '../../auth/auth-state.service';
+import { CurrentUserStore } from '../../users/current-user-store';
 
 type NavLink = {
   label: string;
@@ -16,12 +27,19 @@ type NavLink = {
   styleUrl: './app-shell.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class AppShell {
+export class AppShell implements AfterViewInit {
   private readonly auth = inject(AuthStateService);
+  private readonly currentUser = inject(CurrentUserStore);
+  private readonly destroyRef = inject(DestroyRef);
 
   readonly mobileOpen = signal(false);
 
   readonly isAuthenticated = computed(() => this.auth.isAuthenticated());
+
+  // expose store signals to template
+  readonly me = this.currentUser.me;
+  readonly avatarUrl = this.currentUser.avatarUrl;
+  readonly displayName = this.currentUser.displayName;
 
   readonly navLinks: NavLink[] = [
     { label: 'Explore', path: '/feed' },
@@ -33,6 +51,17 @@ export class AppShell {
     { label: 'Campaigns', path: '/campaigns' },
   ];
 
+  constructor() {
+    // keep header avatar in sync with auth state (loads after login, clears after logout/expiry)
+    effect(() => {
+      if (this.isAuthenticated()) {
+        this.currentUser.loadIfNeeded(this.destroyRef);
+      } else {
+        this.currentUser.clear();
+      }
+    });
+  }
+
   toggleMobile(): void {
     this.mobileOpen.update((v) => !v);
   }
@@ -43,50 +72,50 @@ export class AppShell {
 
   logout(): void {
     this.auth.clearSession();
+    this.currentUser.clear();
     this.closeMobile();
   }
 
-  // for new added designs
-  // In your component TypeScript file
-  ngAfterViewInit() {
+  // ---- your stars logic (kept)
+  ngAfterViewInit(): void {
     this.createStars();
   }
 
-  createStars() {
+  createStars(): void {
     const starsContainer = document.querySelector('.stars');
     if (!starsContainer) return;
 
-    // Clear existing stars
     starsContainer.innerHTML = '';
 
-    // Create 150 stars
     for (let i = 0; i < 150; i++) {
       const star = document.createElement('div');
       star.className = 'star';
 
-      // Random position
       const left = Math.random() * 100;
       const top = Math.random() * 100;
-
-      // Random size (0.5px to 2px)
       const size = 0.5 + Math.random() * 1.5;
-
-      // Random animation delay
       const delay = Math.random() * 3;
 
       star.style.cssText = `
-      position: absolute;
-      left: ${left}%;
-      top: ${top}%;
-      width: ${size}px;
-      height: ${size}px;
-      background: white;
-      border-radius: 50%;
-      animation: twinkle ${2 + Math.random() * 4}s infinite ${delay}s;
-      pointer-events: none;
-    `;
+        position: absolute;
+        left: ${left}%;
+        top: ${top}%;
+        width: ${size}px;
+        height: ${size}px;
+        background: white;
+        border-radius: 50%;
+        animation: twinkle ${2 + Math.random() * 4}s infinite ${delay}s;
+        pointer-events: none;
+      `;
 
       starsContainer.appendChild(star);
     }
+  }
+
+  // helper for initials fallback
+  initial(): string {
+    const name = (this.displayName() ?? '').trim();
+    if (!name) return 'U';
+    return name.slice(0, 1).toUpperCase();
   }
 }

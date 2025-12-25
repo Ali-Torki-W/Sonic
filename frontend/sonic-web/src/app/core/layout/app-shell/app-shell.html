@@ -26,7 +26,20 @@
             <a class="btn btn--solid" routerLink="/account/register">Register</a>
             } @else {
             <a class="btn btn--ghost" routerLink="/posts/new">Create</a>
-            <a class="btn btn--ghost" routerLink="/profile">Profile</a>
+
+            <!-- Avatar-style Profile button (replaces plain "Profile") -->
+            <a class="profile-chip" routerLink="/profile" aria-label="Profile">
+                @if (avatarUrl()) {
+                <img class="profile-chip__img" [src]="avatarUrl()" alt="Avatar" />
+                } @else {
+                <span class="profile-chip__fallback" aria-hidden="true">{{ initial() }}</span>
+                }
+
+                <span class="profile-chip__name">
+                    {{ displayName() ?? 'Profile' }}
+                </span>
+            </a>
+
             <button class="btn btn--solid" type="button" (click)="logout()">Logout</button>
             }
         </div>
@@ -56,7 +69,17 @@
                 <a class="btn btn--solid btn--block" routerLink="/account/register" (click)="closeMobile()">Register</a>
                 } @else {
                 <a class="btn btn--ghost btn--block" routerLink="/posts/new" (click)="closeMobile()">Create</a>
-                <a class="btn btn--ghost btn--block" routerLink="/profile" (click)="closeMobile()">Profile</a>
+
+                <!-- Avatar-style Profile button in drawer -->
+                <a class="btn btn--ghost btn--block" routerLink="/profile" (click)="closeMobile()">
+                    @if (avatarUrl()) {
+                    <img class="drawer-avatar" [src]="avatarUrl()" alt="Avatar" />
+                    } @else {
+                    <span class="drawer-avatar__fallback" aria-hidden="true">{{ initial() }}</span>
+                    }
+                    <span class="drawer-avatar__name">{{ displayName() ?? 'Profile' }}</span>
+                </a>
+
                 <button class="btn btn--solid btn--block" type="button" (click)="logout()">Logout</button>
                 }
             </div>
