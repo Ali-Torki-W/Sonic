@@ -51,7 +51,7 @@
                     </span>
                 </div>
 
-                @if (p.tags?.length) {
+                @if (p.tags.length) {
                 <div class="pd__tags">
                     @for (t of p.tags; track t) {
                     <span class="pd__tag">#{{ t }}</span>
@@ -99,6 +99,12 @@
 
                     <span class="pd__btnCount">{{ p.likeCount }}</span>
                 </button>
+
+                @if (canEditPost()) {
+                <button type="button" class="pd__btn pd__btn--ghost" (click)="goToEdit()">
+                    Edit
+                </button>
+                }
 
                 @if (likeToast()) {
                 <span class="pd__hint">{{ likeToast() }}</span>

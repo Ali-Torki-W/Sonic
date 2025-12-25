@@ -9,6 +9,7 @@ import { PostResponse } from '../../../../shared/contracts/post/post-response';
 import { CreatePostRequest } from '../../../../shared/contracts/post/create-post-request';
 import { UpdatePostRequest } from '../../../../shared/contracts/post/update-post-request';
 import { PostsService } from '../../../../core/posts/post-service';
+import { UsersService } from '../../../../core/users/user-service';
 
 type ApiProblem = {
   title?: string;
@@ -26,6 +27,7 @@ type ApiProblem = {
 })
 export class PostEditorPage {
   private readonly posts = inject(PostsService);
+  private readonly users = inject(UsersService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
@@ -34,6 +36,10 @@ export class PostEditorPage {
   // ---- mode
   readonly postId = signal<string | null>(null);
   readonly isEdit = computed(() => !!this.postId());
+
+  // ---- permission (edit-only)
+  readonly canEdit = signal(true);
+  readonly permissionError = signal<string | null>(null);
 
   // ---- UI state
   readonly loading = signal(false);
@@ -77,7 +83,7 @@ export class PostEditorPage {
     campaignGoal: this.fb.nonNullable.control<string>(''),
   });
 
-  // ---- bridge Reactive Forms -> Signals (this is what fixes the stuck disabled button)
+  // ---- bridge Reactive Forms -> Signals
   private readonly formStatus = toSignal(
     this.form.statusChanges.pipe(startWith(this.form.status)),
     { initialValue: this.form.status }
@@ -123,10 +129,11 @@ export class PostEditorPage {
   readonly canSubmit = computed(() => {
     if (this.loading() || this.saving()) return false;
 
-    // formStatus is now reactive (signals get updated)
+    // edit mode must be authorized
+    if (this.isEdit() && !this.canEdit()) return false;
+
     if (this.formStatus() !== 'VALID') return false;
 
-    // trim-based guards (VALID can be true with whitespace)
     const title = (this.titleValue() ?? '').trim();
     const body = (this.bodyValue() ?? '').trim();
 
@@ -158,6 +165,12 @@ export class PostEditorPage {
     this.submitted.set(true);
     this.apiError.set(null);
     this.apiErrorCode.set(null);
+
+    if (this.isEdit() && !this.canEdit()) {
+      this.apiError.set(this.permissionError() ?? 'You are not allowed to edit this post.');
+      this.apiErrorCode.set('auth.forbidden');
+      return;
+    }
 
     // UI validation first
     if (!this.canSubmit()) {
@@ -230,7 +243,6 @@ export class PostEditorPage {
     const t = this.tagDraft().trim();
     if (!t) return;
 
-    // enforce one tag at a time
     if (t.includes(',')) return;
 
     const next = new Set(this.selectedTags());
@@ -251,13 +263,45 @@ export class PostEditorPage {
     this.loading.set(true);
     this.apiError.set(null);
     this.apiErrorCode.set(null);
+    this.permissionError.set(null);
+    this.canEdit.set(true);
 
     this.posts.getById(id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (post) => {
-          this.applyPostToForm(post);
-          this.loading.set(false);
+          // verify author/admin via /users/me (no guessing via JWT claims)
+          this.users.getMe()
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe({
+              next: (me) => {
+                const role = (me.role ?? '').trim().toLowerCase();
+                const isAdmin = role === 'admin';
+                const isAuthor = me.id === post.authorId;
+
+                if (!isAdmin && !isAuthor) {
+                  this.canEdit.set(false);
+                  this.permissionError.set('You do not have permission to edit this post.');
+                  this.form.disable({ emitEvent: false });
+                  this.loading.set(false);
+                  return;
+                }
+
+                this.applyPostToForm(post);
+                this.loading.set(false);
+              },
+              error: (err: unknown) => {
+                const status = this.getHttpStatus(err);
+                this.canEdit.set(false);
+                this.permissionError.set(
+                  status === 401 || status === 403
+                    ? 'You need to login again.'
+                    : 'Unable to verify your identity.'
+                );
+                this.form.disable({ emitEvent: false });
+                this.loading.set(false);
+              },
+            });
         },
         error: (err: unknown) => {
           const { message, code } = this.extractProblem(err);
@@ -281,10 +325,9 @@ export class PostEditorPage {
 
     this.selectedTags.set(Array.isArray(post.tags) ? post.tags : []);
 
-    // we still disable type in edit mode
+    // disable type in edit mode
     this.form.controls.type.disable({ emitEvent: false });
 
-    // if not campaign => wipe it so UI + payload stays clean
     if (post.type !== PostType.Campaign) {
       this.form.controls.campaignGoal.setValue('');
     }
@@ -304,21 +347,40 @@ export class PostEditorPage {
 
   private extractProblem(err: unknown): { message: string; code: string | null } {
     const anyErr = err as any;
+
+    // Browser-blocked / CORS / network => Angular often reports status 0
+    if (typeof anyErr?.status === 'number' && anyErr.status === 0) {
+      return {
+        message: 'Network blocked (likely CORS). Check API CORS policy for PUT and dev origin.',
+        code: 'client.network',
+      };
+    }
+
     const problem: ApiProblem | undefined = anyErr?.error;
 
     const message =
       (typeof problem?.detail === 'string' && problem.detail.trim()) ||
+      (typeof anyErr?.message === 'string' && anyErr.message.trim()) ||
       'Request failed.';
 
-    const code =
-      (typeof problem?.code === 'string' && problem.code.trim()) ||
-      null;
+    const code = (typeof problem?.code === 'string' && problem.code.trim()) || null;
 
     return { message, code };
   }
 
+
   private nullIfBlank(value: string): string | null {
     const v = (value ?? '').trim();
     return v.length ? v : null;
+  }
+
+  private getHttpStatus(err: unknown): number | null {
+    const anyErr = err as any;
+    if (typeof anyErr?.status === 'number') return anyErr.status;
+
+    const problem: ApiProblem | undefined = anyErr?.error;
+    if (typeof problem?.status === 'number') return problem.status;
+
+    return null;
   }
 }

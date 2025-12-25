@@ -64,17 +64,11 @@ export class RegisterPage {
     return null;
   });
 
-  // readonly canSubmit = computed(() => {
-  //   if (this.loading()) return false;
-  //   return this.clientValidationError() === null;
-  // });
-
   togglePassword(): void {
     this.showPassword.update(v => !v);
   }
 
   async submit(): Promise<void> {
-    // Don’t fail silently
     const clientErr = this.clientValidationError();
     if (clientErr) {
       this.error.set(clientErr);
@@ -94,10 +88,10 @@ export class RegisterPage {
     try {
       const resp = await firstValueFrom(this.authApi.register(payload));
 
-      // Auto-login on successful register (your backend returns token).
+      // Auto-login on successful register (backend returns token).
       this.authState.setSession(resp.accessToken, resp.expiresAtUtc);
 
-      const returnUrl = this.activatedRoute.snapshot.queryParamMap.get('returnUrl') ?? '/feed';
+      const returnUrl = this.activatedRoute.snapshot.queryParamMap.get('returnUrl') ?? '/profile';
       await this.router.navigateByUrl(returnUrl);
     } catch (err: any) {
       // HttpClient "status 0" is network/CORS

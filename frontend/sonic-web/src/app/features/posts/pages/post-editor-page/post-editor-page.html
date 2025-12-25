@@ -13,6 +13,17 @@
         <p class="muted">Loading…</p>
     </div>
     } @else {
+
+    @if (permissionError()) {
+    <div class="panel panel--error">
+        <p class="error-text">{{ permissionError() }}</p>
+        <p class="muted">code: auth.forbidden</p>
+        <div class="footer">
+            <button class="btn btn--ghost" type="button" (click)="cancel()">Back</button>
+        </div>
+    </div>
+    } @else {
+
     @if (apiError()) {
     <div class="panel panel--error">
         <p class="error-text">{{ apiError() }}</p>
@@ -101,5 +112,7 @@
             </button>
         </div>
     </form>
+
+    }
     }
 </section>

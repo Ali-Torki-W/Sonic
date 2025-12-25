@@ -22,7 +22,7 @@ export class PostsService {
 
     update(postId: string, request: UpdatePostRequest): Observable<PostResponse> {
         const id = (postId ?? '').trim();
-        return this.api.put<PostResponse>(`posts/${encodeURIComponent(id)}`, request);
+        return this.api.put<PostResponse>(`/posts/${encodeURIComponent(id)}`, request);
     }
 
     toggleLike(postId: string): Observable<LikeToggleResponse> {
