@@ -1,1 +1,104 @@
-<p>campaigns-page works!</p>
+<section class="cp">
+    <header class="cp__top">
+        <div>
+            <h1>Campaigns</h1>
+            <p class="muted">Join community campaigns. Track participation.</p>
+        </div>
+    </header>
+
+    <div class="cp__filters">
+        <input class="cp__input" type="text" [value]="q()" (input)="q.set(($any($event.target)).value)"
+            (keydown.enter)="onSearchEnter()" placeholder="Search campaigns…" />
+
+        <button type="button" class="cp__btn" (click)="toggleFeatured()">
+            @if (featuredOnly()) { Featured: On } @else { Featured: Off }
+        </button>
+
+        <div class="cp__tagRow">
+            <input class="cp__input" type="text" [value]="tagDraft()"
+                (input)="tagDraft.set(($any($event.target)).value)"
+                (keydown.enter)="$event.preventDefault(); addTagFromDraft()" placeholder="Add one tag…" />
+            <button type="button" class="cp__btn" (click)="addTagFromDraft()">Add tag</button>
+            <button type="button" class="cp__btn cp__btn--ghost" (click)="clearFilters()">Clear</button>
+        </div>
+
+        @if (selectedTags().length) {
+        <div class="cp__tags">
+            @for (t of selectedTags(); track t) {
+            <button type="button" class="cp__tag" (click)="removeTag(t)">
+                #{{ t }} ✕
+            </button>
+            }
+        </div>
+        }
+
+        @if (tagDraft().includes(',')) {
+        <div class="cp__hint">One tag at a time. No commas.</div>
+        }
+    </div>
+
+    @if (loading() && items().length === 0) {
+    <div class="cp__panel">Loading…</div>
+    } @else {
+
+    @if (error()) {
+    <div class="cp__panel cp__panel--error">
+        <div>Error: {{ error() }}</div>
+        @if (errorCode()) { <div class="muted">code: {{ errorCode() }}</div> }
+    </div>
+    }
+
+    @if (items().length === 0) {
+    <div class="cp__panel">No campaigns found.</div>
+    } @else {
+    <div class="cp__list">
+        @for (p of items(); track p.id) {
+        <article class="cp__card">
+            <div class="cp__head">
+                <a class="cp__title" [routerLink]="['/posts', p.id]">{{ p.title }}</a>
+                <div class="muted">Participants: {{ p.participantsCount }}</div>
+            </div>
+
+            @if (p.campaignGoal) {
+            <div class="cp__goal">{{ p.campaignGoal }}</div>
+            }
+
+            @if (p.tags.length) {
+            <div class="cp__tagsSmall">
+                @for (t of p.tags; track t) {
+                <span class="cp__tagSmall">#{{ t }}</span>
+                }
+            </div>
+            }
+
+            <div class="cp__actions">
+                @if (!isAuthed()) {
+                <button type="button" class="cp__btn" (click)="joinCampaign(p.id)">
+                    Login to join
+                </button>
+                } @else {
+                <button type="button" class="cp__btn" (click)="joinCampaign(p.id)"
+                    [disabled]="joinBusyMap()[p.id] === true || joinedMap()[p.id] === true">
+                    @if (joinBusyMap()[p.id] === true) { Joining… }
+                    @else { @if (joinedMap()[p.id] === true) { Joined } @else { Join } }
+                </button>
+                }
+            </div>
+
+            @if (joinErrorMap()[p.id]) {
+            <div class="cp__inlineError">{{ joinErrorMap()[p.id] }}</div>
+            }
+        </article>
+        }
+    </div>
+
+    @if (canLoadMore()) {
+    <div class="cp__more">
+        <button type="button" class="cp__btn cp__btn--ghost" (click)="loadMore()" [disabled]="loading()">
+            @if (loading()) { Loading… } @else { Load more }
+        </button>
+    </div>
+    }
+    }
+    }
+</section>

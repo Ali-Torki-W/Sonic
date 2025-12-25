@@ -73,15 +73,53 @@
             @if (isCampaign()) {
             <section class="pd__campaign">
                 <div class="pd__campaignTitle">Campaign</div>
+
                 <div class="pd__campaignGrid">
                     <div class="pd__campaignItem">
                         <div class="pd__campaignLabel">Goal</div>
                         <div class="pd__campaignValue">{{ p.campaignGoal }}</div>
                     </div>
+
                     <div class="pd__campaignItem">
                         <div class="pd__campaignLabel">Participants</div>
                         <div class="pd__campaignValue">{{ p.participantsCount }}</div>
                     </div>
+                </div>
+
+                <div class="pd__campaignActions">
+                    @if (!isAuthed()) {
+                    <button type="button" class="pd__btn pd__btn--solid" (click)="goToLogin()">
+                        Login to join
+                    </button>
+                    } @else {
+                    <button type="button" class="pd__btn pd__btn--solid" (click)="joinCampaign()"
+                        [disabled]="joinBusy() || joinedCampaign()">
+                        @if (joinBusy()) { Joining… }
+                        @else { @if (joinedCampaign()) { Joined } @else { Join campaign } }
+                    </button>
+                    }
+
+                    @if (joinToast()) {
+                    <span class="pd__hint">{{ joinToast() }}</span>
+                    }
+
+                    @if (joinError()) {
+                    <div class="pd__inlineError">
+                        <div class="pd__inlineErrorText">{{ joinError() }}</div>
+
+                        @if (joinErrorCode()) {
+                        <div class="pd__inlineErrorCode">code: {{ joinErrorCode() }}</div>
+                        }
+
+                        @if (joinNeedsLogin()) {
+                        <div class="pd__inlineErrorActions">
+                            <button type="button" class="pd__btn pd__btn--solid" (click)="goToLogin()">
+                                Login
+                            </button>
+                        </div>
+                        }
+                    </div>
+                    }
                 </div>
             </section>
             }
@@ -146,7 +184,6 @@
             </div>
             }
 
-            <!-- Create Comment -->
             <div class="pd__composer">
                 <div class="pd__composerHead">
                     <div class="pd__composerTitle">Write a comment</div>
@@ -164,7 +201,6 @@
                 </div>
             </div>
 
-            <!-- Comments list -->
             @if (commentsLoading() && commentItems().length === 0) {
             <div class="pd__listSkeleton">
                 <div class="sk sk-cm"></div>

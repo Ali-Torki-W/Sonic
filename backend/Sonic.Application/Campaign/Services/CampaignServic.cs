@@ -29,7 +29,9 @@ public sealed class CampaignService(
             throw Errors.BadRequest("User id is required.", "campaign.user_id_required");
         }
 
-        var post = await _postRepository.GetByIdAsync(postId, cancellationToken) ?? throw Errors.NotFound("Campaign not found.", "campaign.not_found");
+        var post = await _postRepository.GetByIdAsync(postId, cancellationToken)
+                   ?? throw Errors.NotFound("Campaign not found.", "campaign.not_found");
+
         if (post.Type != PostType.Campaign)
         {
             throw Errors.BadRequest("Target post is not a campaign.", "campaign.invalid_type");
@@ -52,7 +54,35 @@ public sealed class CampaignService(
         {
             PostId = postId,
             ParticipantsCount = count,
-            Joined = joinedNow
+            Joined = alreadyExists || joinedNow
+        };
+    }
+
+    public async Task<CampaignJoinResponse> GetJoinStatusAsync(
+        string postId,
+        string userId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(postId))
+            throw Errors.BadRequest("Campaign post id is required.", "campaign.post_id_required");
+
+        if (string.IsNullOrWhiteSpace(userId))
+            throw Errors.BadRequest("User id is required.", "campaign.user_id_required");
+
+        var post = await _postRepository.GetByIdAsync(postId, cancellationToken)
+                   ?? throw Errors.NotFound("Campaign not found.", "campaign.not_found");
+
+        if (post.Type != PostType.Campaign)
+            throw Errors.BadRequest("Target post is not a campaign.", "campaign.invalid_type");
+
+        var alreadyExists = await _participationRepository.ExistsAsync(postId, userId, cancellationToken);
+        var count = await _participationRepository.CountForPostAsync(postId, cancellationToken);
+
+        return new CampaignJoinResponse
+        {
+            PostId = postId,
+            ParticipantsCount = count,
+            Joined = alreadyExists
         };
     }
 }

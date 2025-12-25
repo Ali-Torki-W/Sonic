@@ -58,4 +58,20 @@ public sealed class CampaignsController(
 
         return Ok(result);
     }
+
+    [HttpGet("campaigns/{postId}/join")]
+    [Authorize]
+    public async Task<ActionResult<CampaignJoinResponse>> GetJoinStatus(
+    string postId,
+    CancellationToken cancellationToken = default)
+    {
+        var currentUserId = GetCurrentUserId();
+
+        var result = await _campaignService.GetJoinStatusAsync(
+            postId,
+            currentUserId,
+            cancellationToken);
+
+        return Ok(result);
+    }
 }

@@ -13,6 +13,7 @@ import { CommentsService } from '../../../../core/comments/comment-service';
 import { AuthorDisplayNameCache } from '../../../../core/users/author-name-cache';
 import { UsersService } from '../../../../core/users/user-service';
 import { AuthStateService } from '../../../../core/auth/auth-state.service';
+import { CampaignsService } from '../../../../core/campaign/campaign-service';
 
 type ApiProblem = {
   title?: string;
@@ -36,23 +37,20 @@ export class PostDetailPage {
   private readonly authorNames = inject(AuthorDisplayNameCache);
   private readonly users = inject(UsersService);
   private readonly authState = inject(AuthStateService);
+  private readonly campaigns = inject(CampaignsService);
   private readonly destroyRef = inject(DestroyRef);
 
-  // ---- ids
   readonly postId = signal<string>('');
 
-  // ---- current user (for canEdit)
   readonly meId = signal<string | null>(null);
   readonly meRole = signal<string | null>(null);
   readonly meLoading = signal(false);
 
-  // ---- post
   readonly postLoading = signal(false);
   readonly postError = signal<string | null>(null);
   readonly postErrorCode = signal<string | null>(null);
   readonly post = signal<PostResponse | null>(null);
 
-  // ---- like (UX)
   readonly likeBusy = signal(false);
   readonly liked = signal(false);
   readonly likeToast = signal<string | null>(null);
@@ -60,10 +58,8 @@ export class PostDetailPage {
   readonly likeErrorCode = signal<string | null>(null);
   readonly likeNeedsLogin = signal(false);
 
-  // ---- author display names (resolved -> stored as strings only)
   readonly authorNameMap = signal<Record<string, string>>({});
 
-  // ---- comments (paged)
   readonly commentsLoading = signal(false);
   readonly commentsError = signal<string | null>(null);
   readonly commentsErrorCode = signal<string | null>(null);
@@ -77,18 +73,17 @@ export class PostDetailPage {
     () => this.commentItems().length < this.commentsTotalItems()
   );
 
-  // ---- create comment
   readonly commentDraft = signal('');
   readonly creatingComment = signal(false);
 
-  // ---- derived
   readonly isCampaign = computed(() => this.post()?.type === PostType.Campaign);
+
+  readonly isAuthed = computed(() => this.authState.isAuthenticated());
 
   readonly canEditPost = computed(() => {
     const p = this.post();
     if (!p) return false;
-
-    if (!this.authState.isAuthenticated()) return false;
+    if (!this.isAuthed()) return false;
 
     const meId = this.meId();
     const role = (this.meRole() ?? '').trim().toLowerCase();
@@ -97,6 +92,21 @@ export class PostDetailPage {
     const isAuthor = !!meId && meId === p.authorId;
 
     return isAuthor || isAdmin;
+  });
+
+  readonly joinBusy = signal(false);
+  readonly joinedCampaign = signal(false);
+  readonly joinToast = signal<string | null>(null);
+  readonly joinError = signal<string | null>(null);
+  readonly joinErrorCode = signal<string | null>(null);
+  readonly joinNeedsLogin = signal(false);
+
+  readonly canJoinCampaign = computed(() => {
+    if (!this.isCampaign()) return false;
+    if (!this.isAuthed()) return false;
+    if (this.joinBusy()) return false;
+    if (this.joinedCampaign()) return false;
+    return true;
   });
 
   constructor() {
@@ -108,16 +118,11 @@ export class PostDetailPage {
 
     this.postId.set(id);
 
-    // load current user only if we have a valid session
     this.loadMeIfAuthenticated();
-
     this.loadPost();
     this.refreshComments();
   }
 
-  // --------------------
-  // navigation
-  // --------------------
   backToFeed(): void {
     this.router.navigate(['/feed']);
   }
@@ -134,11 +139,8 @@ export class PostDetailPage {
     this.router.navigate([`/posts/${encodeURIComponent(p.id)}/edit`]);
   }
 
-  // --------------------
-  // current user
-  // --------------------
   private loadMeIfAuthenticated(): void {
-    if (!this.authState.isAuthenticated()) return;
+    if (!this.isAuthed()) return;
 
     this.meLoading.set(true);
 
@@ -151,13 +153,11 @@ export class PostDetailPage {
           this.meRole.set(me.role);
           this.meLoading.set(false);
 
-          // optional: seed name cache for "me"
           if (me.displayName?.trim()) {
             this.setAuthorName(me.id, me.displayName.trim());
           }
         },
         error: () => {
-          // do not block the page if /users/me fails
           this.meId.set(null);
           this.meRole.set(null);
           this.meLoading.set(false);
@@ -165,9 +165,6 @@ export class PostDetailPage {
       });
   }
 
-  // --------------------
-  // post
-  // --------------------
   private loadPost(): void {
     const id = this.postId();
 
@@ -185,8 +182,11 @@ export class PostDetailPage {
 
           this.resolveAuthorName(p.authorId);
 
-          // reload-safe: ask backend if CURRENT user likes it
           this.loadLikeStatus();
+
+          if (p.type === PostType.Campaign) {
+            this.loadJoinStatus();
+          }
         },
         error: (err: unknown) => {
           const { message, code } = this.extractProblem(err);
@@ -213,9 +213,7 @@ export class PostDetailPage {
         },
         error: (err: unknown) => {
           const status = this.getHttpStatus(err);
-          if (status === 401 || status === 403) {
-            this.liked.set(false);
-          }
+          if (status === 401 || status === 403) this.liked.set(false);
         },
       });
   }
@@ -265,9 +263,92 @@ export class PostDetailPage {
       });
   }
 
-  // --------------------
-  // comments (paging)
-  // --------------------
+  private loadJoinStatus(): void {
+    const p = this.post();
+    if (!p) return;
+    if (p.type !== PostType.Campaign) return;
+    if (!this.isAuthed()) return;
+
+    this.campaigns
+      .getJoinStatus(p.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (resp) => {
+          this.joinedCampaign.set(!!resp.joined);
+
+          const cur = this.post();
+          if (cur) {
+            this.post.set({
+              ...cur,
+              participantsCount: Number(resp.participantsCount),
+            });
+          }
+        },
+        error: (err: unknown) => {
+          const status = this.getHttpStatus(err);
+          if (status === 401 || status === 403) return;
+        },
+      });
+  }
+
+  joinCampaign(): void {
+    const p = this.post();
+    if (!p) return;
+    if (p.type !== PostType.Campaign) return;
+
+    this.joinToast.set(null);
+    this.joinError.set(null);
+    this.joinErrorCode.set(null);
+    this.joinNeedsLogin.set(false);
+
+    if (!this.isAuthed()) {
+      this.joinNeedsLogin.set(true);
+      this.joinError.set('Please login to join campaigns.');
+      this.joinErrorCode.set('auth.unauthorized');
+      return;
+    }
+
+    if (this.joinBusy() || this.joinedCampaign()) return;
+
+    this.joinBusy.set(true);
+
+    this.campaigns
+      .join(p.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (resp) => {
+          this.joinedCampaign.set(true);
+
+          this.post.set({
+            ...p,
+            participantsCount: Number(resp.participantsCount),
+          });
+
+          this.joinBusy.set(false);
+
+          this.joinToast.set(resp.joined ? 'Joined campaign.' : 'You already joined.');
+          window.setTimeout(() => this.joinToast.set(null), 1800);
+        },
+        error: (err: unknown) => {
+          const status = this.getHttpStatus(err);
+
+          if (status === 401 || status === 403) {
+            const { message, code } = this.extractProblem(err);
+            this.joinError.set(message || 'Please login to join campaigns.');
+            this.joinErrorCode.set(code ?? 'auth.unauthorized');
+            this.joinNeedsLogin.set(true);
+            this.joinBusy.set(false);
+            return;
+          }
+
+          const { message, code } = this.extractProblem(err);
+          this.joinError.set(message);
+          this.joinErrorCode.set(code);
+          this.joinBusy.set(false);
+        },
+      });
+  }
+
   refreshComments(): void {
     this.commentsPage.set(1);
     this.commentItems.set([]);
@@ -378,9 +459,6 @@ export class PostDetailPage {
       });
   }
 
-  // --------------------
-  // author display helpers
-  // --------------------
   displayAuthorName(authorId: string): string {
     const id = (authorId ?? '').trim();
     if (!id) return 'Unknown';
@@ -420,9 +498,6 @@ export class PostDetailPage {
     return id.length > 10 ? `${id.slice(0, 6)}…${id.slice(-4)}` : id;
   }
 
-  // --------------------
-  // errors
-  // --------------------
   private extractProblem(err: unknown): { message: string; code: string | null } {
     const anyErr = err as any;
     const problem: ApiProblem | undefined = anyErr?.error;

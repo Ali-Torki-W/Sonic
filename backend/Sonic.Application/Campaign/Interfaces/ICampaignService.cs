@@ -8,4 +8,9 @@ public interface ICampaignService
         string postId,
         string userId,
         CancellationToken cancellationToken = default);
+
+    Task<CampaignJoinResponse> GetJoinStatusAsync(
+    string postId,
+    string currentUserId,
+    CancellationToken cancellationToken);
 }
