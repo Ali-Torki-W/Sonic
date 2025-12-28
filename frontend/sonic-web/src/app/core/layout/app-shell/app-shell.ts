@@ -43,11 +43,11 @@ export class AppShell implements AfterViewInit {
 
   readonly navLinks: NavLink[] = [
     { label: 'Explore', path: '/feed' },
-    { label: 'Experiences', path: '/feed', queryParams: { type: 'Experience' } },
-    { label: 'Ideas', path: '/feed', queryParams: { type: 'Idea' } },
-    { label: 'Models', path: '/feed', queryParams: { type: 'ModelGuide' } },
-    { label: 'Courses', path: '/feed', queryParams: { type: 'Course' } },
-    { label: 'News', path: '/feed', queryParams: { type: 'News' } },
+    // { label: 'Experiences', path: '/feed', queryParams: { type: 'Experience' } },
+    // { label: 'Ideas', path: '/feed', queryParams: { type: 'Idea' } },
+    // { label: 'Models', path: '/feed', queryParams: { type: 'ModelGuide' } },
+    // { label: 'Courses', path: '/feed', queryParams: { type: 'Course' } },
+    // { label: 'News', path: '/feed', queryParams: { type: 'News' } },
     { label: 'Campaigns', path: '/campaigns' },
   ];
 
