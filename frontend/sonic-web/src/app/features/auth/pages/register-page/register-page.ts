@@ -5,10 +5,9 @@ import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
 import { MatSnackBar } from '@angular/material/snack-bar';
 
-import { AuthStateService } from '../../../../core/auth/auth-state.service';
-import type { ProblemDetails } from '../../../../core/http/problem-details';
 import { AuthService } from '../../../../core/auth/auth.service';
 import { RegisterRequest } from '../../../../shared/contracts/auth/register-request';
+import type { ProblemDetails } from '../../../../core/http/problem-details';
 
 @Component({
   selector: 'sonic-register-page',
@@ -20,14 +19,15 @@ import { RegisterRequest } from '../../../../shared/contracts/auth/register-requ
 })
 export class RegisterPage {
   private readonly authApi = inject(AuthService);
-  private readonly authState = inject(AuthStateService);
   private readonly router = inject(Router);
   private readonly activatedRoute = inject(ActivatedRoute);
   private readonly snack = inject(MatSnackBar);
 
+  // Constants
   private readonly emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
   private readonly passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,64}$/;
 
+  // State
   readonly displayName = signal('');
   readonly email = signal('');
   readonly password = signal('');
@@ -37,30 +37,24 @@ export class RegisterPage {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
 
+  // Computed Validation
   readonly passwordMismatch = computed(() => {
-    const p = this.password();
-    const c = this.confirmPassword();
-    return p.length > 0 && c.length > 0 && p !== c;
+    return this.password() && this.confirmPassword() && this.password() !== this.confirmPassword();
   });
 
-  readonly emailInvalid = computed(() => {
+  readonly validationError = computed(() => {
+    if (!this.displayName().trim()) return 'Display name is required.';
+
     const e = this.email().trim();
-    return e.length > 0 && !this.emailRegex.test(e);
-  });
+    if (!e) return 'Email is required.';
+    if (!this.emailRegex.test(e)) return 'Email is invalid.';
 
-  readonly passwordInvalid = computed(() => {
     const p = this.password();
-    return p.length > 0 && !this.passwordRegex.test(p);
-  });
+    if (!p) return 'Password is required.';
+    if (!this.passwordRegex.test(p)) return 'Password must be 8-64 chars (Upper, Lower, Digit).';
 
-  readonly clientValidationError = computed((): string | null => {
-    if (this.displayName().trim().length === 0) return 'Display name is required.';
-    if (this.email().trim().length === 0) return 'Email is required.';
-    if (this.emailInvalid()) return 'Email is invalid (example: name@domain.com).';
-    if (this.password().length === 0) return 'Password is required.';
-    if (this.passwordInvalid()) return 'Password must be 8-64 chars and include uppercase, lowercase, and a number.';
-    if (this.confirmPassword().length === 0) return 'Confirm password is required.';
     if (this.passwordMismatch()) return 'Passwords do not match.';
+
     return null;
   });
 
@@ -69,10 +63,9 @@ export class RegisterPage {
   }
 
   async submit(): Promise<void> {
-    const clientErr = this.clientValidationError();
-    if (clientErr) {
-      this.error.set(clientErr);
-      this.snack.open(clientErr, 'OK', { duration: 3500 });
+    const validationErr = this.validationError();
+    if (validationErr) {
+      this.showError(validationErr);
       return;
     }
 
@@ -86,70 +79,28 @@ export class RegisterPage {
     };
 
     try {
-      const resp = await firstValueFrom(this.authApi.register(payload));
-
-      // Auto-login on successful register (backend returns token).
-      this.authState.setSession(resp.accessToken, resp.expiresAtUtc);
+      await firstValueFrom(this.authApi.register(payload));
 
       const returnUrl = this.activatedRoute.snapshot.queryParamMap.get('returnUrl') ?? '/profile';
       await this.router.navigateByUrl(returnUrl);
     } catch (err: any) {
-      // HttpClient "status 0" is network/CORS
-      if (err?.status === 0) {
-        const msg = 'Network/CORS error: cannot reach API.';
-        this.error.set(msg);
-        this.snack.open(msg, 'OK', { duration: 3500 });
-        return;
-      }
+      // TRUST THE INTERCEPTOR:
+      // The interceptor has already normalized 400 Validation Errors,
+      // 0 Network Errors, and 500 Server Errors into a clean ProblemDetails.
+      const pd = err.error as ProblemDetails;
 
-      const pd = this.tryReadProblemDetails(err);
-      const msg =
-        firstValidationMessage(pd) ??
-        (pd?.detail?.trim() ? pd.detail.trim() : null) ??
-        (pd?.title?.trim() ? pd.title.trim() : null) ??
-        statusFallback(err?.status) ??
-        'Registration failed.';
+      // Even if it was a complex validation error, our interceptor 
+      // moved the first error message into `pd.detail`.
+      const msg = pd.detail || 'Registration failed.';
 
-      this.error.set(msg);
-      this.snack.open(msg, 'OK', { duration: 4500 });
+      this.showError(msg);
     } finally {
       this.loading.set(false);
     }
   }
 
-  private tryReadProblemDetails(err: any): ProblemDetails | null {
-    const body = err?.error;
-    if (!body) return null;
-
-    if (typeof body === 'string') {
-      try {
-        return JSON.parse(body) as ProblemDetails;
-      } catch {
-        // If it's plain text from backend, treat it as detail
-        return { detail: body } as ProblemDetails;
-      }
-    }
-
-    if (typeof body === 'object') return body as ProblemDetails;
-    return null;
+  private showError(msg: string) {
+    this.error.set(msg);
+    this.snack.open(msg, 'OK', { duration: 4500 });
   }
-}
-
-function firstValidationMessage(pd: ProblemDetails | null): string | null {
-  const errors = pd?.errors;
-  if (!errors) return null;
-
-  const keys = Object.keys(errors);
-  if (keys.length === 0) return null;
-
-  const firstKey = keys[0];
-  const firstMsg = errors[firstKey]?.[0];
-  return (typeof firstMsg === 'string' && firstMsg.trim()) ? firstMsg.trim() : null;
-}
-
-function statusFallback(status: number | null | undefined): string | null {
-  if (status === 400) return 'Invalid registration data.';
-  if (status === 401) return 'Unauthorized. Please log in.';
-  if (status === 403) return 'Forbidden.';
-  return null;
 }

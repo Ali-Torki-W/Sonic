@@ -1,6 +1,5 @@
 import { Routes } from '@angular/router';
 
-import { HomePage } from './features/home/pages/home-page/home-page';
 import { FeedPage } from './features/feed/pages/feed-page/feed-page';
 import { LoginPage } from './features/auth/pages/login-page/login-page';
 import { RegisterPage } from './features/auth/pages/register-page/register-page';
@@ -12,46 +11,46 @@ import { ServerErrorPage } from './features/misc/pages/server-error-page/server-
 import { NotFoundPage } from './features/misc/pages/not-found-page/not-found-page';
 
 import { authGuard } from './core/guards/auth-guard';
-import { authLoggedInGuard } from './core/guards/auth-logged-in-guard';
+import { guestGuard } from './core/guards/guest-guard';
 
 export const routes: Routes = [
-    // Landing / Home
-    { path: '', pathMatch: 'full', component: HomePage },
-    { path: 'home', component: HomePage },
+    // Public - Home
+    // Added pathMatch: 'full' to prevent prefix matching issues
+    { path: '', component: FeedPage, pathMatch: 'full', title: 'Sonic - Feed' },
+    { path: 'feed', component: FeedPage, title: 'Sonic - Feed' },
+    { path: 'campaigns', component: CampaignsPage, title: 'Sonic - Campaigns' },
 
-    // Public
-    { path: 'feed', component: FeedPage },
-    { path: 'campaigns', component: CampaignsPage },
-
-    // Auth required (MUST be before posts/:id)
+    // 🔒 Auth Required Group
+    // Any child route here runs the authGuard + Snack check
     {
         path: '',
         runGuardsAndResolvers: 'always',
         canActivate: [authGuard],
         children: [
-            { path: 'posts/new', component: PostEditorPage },
-            { path: 'posts/:id/edit', component: PostEditorPage },
-            { path: 'profile', component: ProfilePage },
+            { path: 'posts/new', component: PostEditorPage, title: 'New Post' },
+            { path: 'posts/:id/edit', component: PostEditorPage, title: 'Edit Post' },
+            { path: 'profile', component: ProfilePage, title: 'My Profile' },
         ],
     },
 
-    // Public post detail (MUST be after /posts/new)
-    { path: 'posts/:id', component: PostDetailPage },
+    // Public Post Detail 
+    // MUST remain below the Auth Group so 'posts/new' is matched first
+    { path: 'posts/:id', component: PostDetailPage, title: 'Sonic - Post' },
 
-    // Logged-in users shouldn't hit login/register
+    // 🚫 Guest Group (Login/Register)
+    // Logged-in users are kicked out to /feed
     {
         path: '',
-        runGuardsAndResolvers: 'always',
-        canActivate: [authLoggedInGuard],
+        canActivate: [guestGuard],
         children: [
-            { path: 'account/login', component: LoginPage },
-            { path: 'account/register', component: RegisterPage },
+            { path: 'account/login', component: LoginPage, title: 'Sign In' },
+            { path: 'account/register', component: RegisterPage, title: 'Create Account' },
         ],
     },
 
     // Errors
-    { path: 'server-error', component: ServerErrorPage },
+    { path: 'server-error', component: ServerErrorPage, title: 'Server Error' },
 
     // Fallback
-    { path: '**', component: NotFoundPage },
+    { path: '**', component: NotFoundPage, title: 'Page Not Found' },
 ];
