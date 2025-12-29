@@ -1,0 +1,19 @@
+<section class="error-page error-page--critical">
+    <div class="error-card">
+        <div class="icon-wrapper">
+            <span class="icon">⚠</span>
+        </div>
+
+        <h2 class="error-title">System Malfunction</h2>
+
+        <p class="error-desc">
+            Internal core error detected (500).
+            Our engineers have been notified of the breach.
+        </p>
+
+        <div class="error-actions">
+            <button type="button" class="btn btn--solid" (click)="retry()">Retry</button>
+            <a routerLink="/feed" class="btn btn--ghost">Abort to Home</a>
+        </div>
+    </div>
+</section>

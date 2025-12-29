@@ -9,5 +9,7 @@ import { RouterLink } from "@angular/router";
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ServerErrorPage {
-
+  retry(): void {
+    window.location.reload();
+  }
 }
