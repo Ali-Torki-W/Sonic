@@ -8,19 +8,26 @@ export class ApiClient {
     private readonly http = inject(HttpClient);
     private readonly baseUrl = environment.apiBaseUrl.replace(/\/+$/, '');
 
+    // Note: We don't need catchError() here anymore.
+    // The interceptors ensure that if an error arrives here, it is already clean.
+
     get<T>(path: string, params?: HttpParams): Observable<T> {
-        return this.http.get<T>(`${this.baseUrl}${path}`, { params });
+        return this.http.get<T>(this.url(path), { params });
     }
 
     post<T>(path: string, body: unknown, params?: HttpParams): Observable<T> {
-        return this.http.post<T>(`${this.baseUrl}${path}`, body, { params });
+        return this.http.post<T>(this.url(path), body, { params });
     }
 
     put<T>(path: string, body: unknown, params?: HttpParams): Observable<T> {
-        return this.http.put<T>(`${this.baseUrl}${path}`, body, { params });
+        return this.http.put<T>(this.url(path), body, { params });
     }
 
     delete<T>(path: string, params?: HttpParams): Observable<T> {
-        return this.http.delete<T>(`${this.baseUrl}${path}`, { params });
+        return this.http.delete<T>(this.url(path), { params });
+    }
+
+    private url(path: string): string {
+        return `${this.baseUrl}${path}`;
     }
 }
