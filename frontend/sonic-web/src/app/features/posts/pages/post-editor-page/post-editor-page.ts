@@ -8,7 +8,7 @@ import { PostType } from '../../../../shared/contracts/post/post-type';
 import { PostResponse } from '../../../../shared/contracts/post/post-response';
 import { CreatePostRequest } from '../../../../shared/contracts/post/create-post-request';
 import { UpdatePostRequest } from '../../../../shared/contracts/post/update-post-request';
-import { PostsService } from '../../../../core/posts/post-service';
+import { PostsService } from '../../../../core/posts/post.service';
 import { UsersService } from '../../../../core/users/user-service';
 
 type ApiProblem = {
@@ -21,7 +21,7 @@ type ApiProblem = {
 @Component({
   selector: 'sonic-post-editor-page',
   standalone: true,
-  imports: [RouterLink, ReactiveFormsModule],
+  imports: [ReactiveFormsModule],
   templateUrl: './post-editor-page.html',
   styleUrl: './post-editor-page.scss',
 })

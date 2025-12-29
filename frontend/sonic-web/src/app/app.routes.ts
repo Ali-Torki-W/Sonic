@@ -7,11 +7,11 @@ import { CampaignsPage } from './features/campaigns/pages/campaigns-page/campaig
 import { PostDetailPage } from './features/posts/pages/post-detail-page/post-detail-page';
 import { PostEditorPage } from './features/posts/pages/post-editor-page/post-editor-page';
 import { ProfilePage } from './features/profile/pages/profile-page/profile-page';
-import { ServerErrorPage } from './features/misc/pages/server-error-page/server-error-page';
-import { NotFoundPage } from './features/misc/pages/not-found-page/not-found-page';
+import { ServerErrorPage } from './features/errors/pages/server-error-page/server-error-page';
+import { NotFoundPage } from './features/errors/pages/not-found-page/not-found-page';
 
-import { authGuard } from './core/guards/auth-guard';
-import { guestGuard } from './core/guards/guest-guard';
+import { authGuard } from './core/guards/auth.guard';
+import { guestGuard } from './core/guards/guest.guard';
 
 export const routes: Routes = [
     // Public - Home

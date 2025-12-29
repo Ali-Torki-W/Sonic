@@ -11,9 +11,9 @@ export interface FeedQuery {
     page: number;
     pageSize: number;
     type?: PostType | null;
-    tags?: readonly string[] | null; // repeat key: tag=AI&tag=LLM
-    q?: string | null;               // maps to ?q=
-    featured?: boolean | null;        // maps to ?featured=
+    tags?: readonly string[];
+    q?: string | null;
+    featured?: boolean | null;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -22,25 +22,24 @@ export class FeedService {
 
     getFeed(query: FeedQuery): Observable<PagedResult<PostResponse>> {
         let params = new HttpParams()
-            .set('page', String(query.page))
-            .set('pageSize', String(query.pageSize));
+            .set('page', query.page)
+            .set('pageSize', query.pageSize);
 
         if (query.type) {
             params = params.set('type', query.type);
         }
 
-        for (const t of (query.tags ?? [])) {
-            const tag = (t ?? '').trim();
-            if (tag) params = params.append('tag', tag);
+        query.tags?.forEach(tag => {
+            if (tag.trim()) params = params.append('tag', tag.trim());
+        });
+
+        if (query.q?.trim()) {
+            params = params.set('q', query.q.trim());
         }
 
-        const q = (query.q ?? '').trim();
-        if (q) params = params.set('q', q);
-
-        if (query.featured === true) {
+        if (query.featured) {
             params = params.set('featured', 'true');
         }
-        // featured null/false => omit
 
         return this.api.get<PagedResult<PostResponse>>('/posts', params);
     }

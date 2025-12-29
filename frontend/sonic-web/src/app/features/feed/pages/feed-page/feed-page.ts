@@ -1,116 +1,116 @@
-import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { Component, DestroyRef, computed, effect, inject, signal, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
-import { DatePipe } from '@angular/common';
+import { DatePipe, CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 
 import { PostResponse } from '../../../../shared/contracts/post/post-response';
 import { PostType } from '../../../../shared/contracts/post/post-type';
 import { FeedQuery, FeedService } from '../../services/feed-service';
-import { AuthorDisplayNameCache } from '../../../../core/users/author-name-cache';
-
-
-type ApiProblem = {
-  title?: string;
-  status?: number;
-  detail?: string;
-  code?: string;
-};
+import { AuthorDisplayNameCache } from '../../../../core/users/author-display-name-cache';
+import { ProblemDetails } from '../../../../core/http/problem-details';
 
 @Component({
   selector: 'sonic-feed-page',
   standalone: true,
-  imports: [RouterLink, DatePipe],
+  imports: [CommonModule, RouterLink, DatePipe, FormsModule],
   templateUrl: './feed-page.html',
   styleUrl: './feed-page.scss',
 })
 export class FeedPage {
   private readonly feedService = inject(FeedService);
   private readonly authorCache = inject(AuthorDisplayNameCache);
+
+  // ✅ FIX 1: Inject DestroyRef explicitly
   private readonly destroyRef = inject(DestroyRef);
 
-  // ---- UI state
+  // --- UI State ---
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
-  readonly errorCode = signal<string | null>(null);
 
-  // ---- paging
+  // --- Data State ---
   readonly page = signal(1);
-  readonly pageSize = signal(10);
-  readonly totalItems = signal(0);
   readonly items = signal<readonly PostResponse[]>([]);
-  readonly canLoadMore = computed(() => this.items().length < this.totalItems());
+  readonly totalItems = signal(0);
 
-  // ---- filters
+  // Author Display Names Cache
+  readonly authorNames = signal<Record<string, string>>({});
+
+  // --- Filter State ---
   readonly q = signal('');
   readonly featuredOnly = signal(false);
   readonly selectedType = signal<PostType | null>(null);
-
-  // tags: one-by-one only (no comma split)
   readonly selectedTags = signal<readonly string[]>([]);
   readonly tagDraft = signal('');
 
-  // ---- author display names
-  readonly authorNames = signal<Record<string, string>>({});
-  private readonly authorRequested = new Set<string>();
+  // --- Computed Helpers ---
+  readonly typeOptions = Object.values(PostType);
 
-  readonly typeOptions: readonly PostType[] = [
-    PostType.Experience,
-    PostType.Idea,
-    PostType.ModelGuide,
-    PostType.Course,
-    PostType.News,
-    PostType.Campaign,
-  ];
+  readonly canLoadMore = computed(() => {
+    return !this.loading() && this.items().length < this.totalItems();
+  });
 
   constructor() {
     this.refresh();
+
+    // Reactive Effect: Resolve Author Names
+    effect(() => {
+      const posts = this.items();
+      const currentCache = untracked(this.authorNames);
+
+      posts.forEach(p => {
+        if (!p.authorId || currentCache[p.authorId]) return;
+
+        this.authorCache.getDisplayName(p.authorId)
+          // ✅ FIX 2: Pass destroyRef explicitly inside effect
+          .pipe(takeUntilDestroyed(this.destroyRef))
+          .subscribe(name => {
+            if (name) {
+              this.authorNames.update(map => ({ ...map, [p.authorId]: name }));
+            }
+          });
+      });
+    });
   }
 
-  // --------------------
-  // actions
-  // --------------------
+  // --- Actions ---
+
   refresh(): void {
     this.page.set(1);
-    this.items.set([]);
-    this.fetchPage({ append: false });
+    this.executeFetch({ append: false });
   }
 
   loadMore(): void {
-    if (this.loading() || !this.canLoadMore()) return;
-    this.page.set(this.page() + 1);
-    this.fetchPage({ append: true });
+    if (this.loading()) return;
+    this.page.update(p => p + 1);
+    this.executeFetch({ append: true });
+  }
+
+  // --- Filter Logic ---
+
+  onSearchEnter(): void { this.refresh(); }
+
+  toggleFeatured(): void {
+    this.featuredOnly.update(v => !v);
+    this.refresh();
   }
 
   setType(type: PostType | null): void {
-    this.selectedType.set(this.selectedType() === type ? null : type);
-    this.refresh();
-  }
-
-  toggleFeatured(): void {
-    this.featuredOnly.set(!this.featuredOnly());
-    this.refresh();
-  }
-
-  onSearchEnter(): void {
+    this.selectedType.update(curr => (curr === type ? null : type));
     this.refresh();
   }
 
   addTagFromDraft(): void {
     const tag = this.tagDraft().trim();
     if (!tag) return;
-
-    if (this.selectedTags().includes(tag)) {
-      this.tagDraft.set('');
-      return;
-    }
-
-    this.selectedTags.set([...this.selectedTags(), tag]);
+    this.selectedTags.update(tags => tags.includes(tag) ? tags : [...tags, tag]);
     this.tagDraft.set('');
     this.refresh();
   }
 
-  removeTag(tag: string): void {
-    this.selectedTags.set(this.selectedTags().filter(t => t !== tag));
+  removeTag(tagToRemove: string): void {
+    this.selectedTags.update(tags => tags.filter(t => t !== tagToRemove));
     this.refresh();
   }
 
@@ -123,91 +123,46 @@ export class FeedPage {
     this.refresh();
   }
 
-  authorName(authorId: string): string {
-    const map = this.authorNames();
-    return map[authorId] ?? '…';
+  // --- UI Helpers ---
+
+  getAuthorName(authorId: string): string {
+    return this.authorNames()[authorId] || '...';
   }
 
-  // --------------------
-  // internal
-  // --------------------
-  private fetchPage(opts: { append: boolean }): void {
+  // --- Core Fetch Logic ---
+
+  private executeFetch(opts: { append: boolean }): void {
     this.loading.set(true);
     this.error.set(null);
-    this.errorCode.set(null);
 
     const query: FeedQuery = {
       page: this.page(),
-      pageSize: this.pageSize(),
+      pageSize: 10,
+      q: this.q() || null,
       type: this.selectedType(),
       tags: this.selectedTags(),
-      q: this.q(),
-      featured: this.featuredOnly() ? true : null,
+      featured: this.featuredOnly() || null
     };
 
-    this.feedService
-      .getFeed(query)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+    this.feedService.getFeed(query)
+      .pipe(
+        // ✅ FIX 3: Pass destroyRef explicitly here too (fixes button click crash)
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.loading.set(false))
+      )
       .subscribe({
         next: (res) => {
-          const nextItems = opts.append ? [...this.items(), ...res.items] : res.items;
-          this.items.set(nextItems);
           this.totalItems.set(res.totalItems);
-
-          this.prefetchAuthorNames(nextItems);
-
-          this.loading.set(false);
+          if (opts.append) {
+            this.items.update(current => [...current, ...res.items]);
+          } else {
+            this.items.set(res.items);
+          }
         },
-        error: (err: unknown) => {
-          const { message, code } = this.extractProblem(err);
-          this.error.set(message);
-          this.errorCode.set(code);
-          this.loading.set(false);
-        },
+        error: (err) => {
+          const pd = err.error as ProblemDetails;
+          this.error.set(pd?.detail || 'Unable to retrieve mission protocols.');
+        }
       });
-  }
-
-  private prefetchAuthorNames(posts: readonly PostResponse[]): void {
-    for (const p of posts) {
-      const authorId = (p.authorId ?? '').trim();
-      if (!authorId) continue;
-
-      // already loaded
-      if (this.authorNames()[authorId]) continue;
-
-      // already requested (avoid spamming)
-      if (this.authorRequested.has(authorId)) continue;
-      this.authorRequested.add(authorId);
-
-      this.authorCache
-        .getDisplayName(authorId)
-        .pipe(takeUntilDestroyed(this.destroyRef))
-        .subscribe({
-          next: (name) => {
-            // IMPORTANT: name is string | null. Only assign if string.
-            if (!name) return;
-
-            const current = this.authorNames();
-            if (current[authorId] === name) return;
-
-            this.authorNames.set({ ...current, [authorId]: name });
-          },
-        });
-    }
-  }
-
-  private extractProblem(err: unknown): { message: string; code: string | null } {
-    const anyErr = err as any;
-    const problem: ApiProblem | undefined = anyErr?.error;
-
-    const message =
-      (typeof problem?.detail === 'string' && problem.detail.trim()) ||
-      'Failed to load feed.';
-
-    const code =
-      (typeof problem?.code === 'string' && problem.code.trim()) ||
-      null;
-
-    return { message, code };
   }
 }

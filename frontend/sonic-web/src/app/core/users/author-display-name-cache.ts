@@ -3,19 +3,18 @@ import { Observable, of } from 'rxjs';
 import { catchError, map, shareReplay } from 'rxjs/operators';
 import { UsersService } from './user-service';
 
-
 @Injectable({ providedIn: 'root' })
 export class AuthorDisplayNameCache {
     private readonly users = inject(UsersService);
-
     private readonly cache = new Map<string, Observable<string | null>>();
 
     getDisplayName(userId: string): Observable<string | null> {
         const id = (userId ?? '').trim();
         if (!id) return of(null);
 
-        const existing = this.cache.get(id);
-        if (existing) return existing;
+        if (this.cache.has(id)) {
+            return this.cache.get(id)!;
+        }
 
         const req$ = this.users.getPublicProfile(id).pipe(
             map(p => {
@@ -33,8 +32,8 @@ export class AuthorDisplayNameCache {
     seed(userId: string, displayName: string): void {
         const id = (userId ?? '').trim();
         const name = (displayName ?? '').trim();
-        if (!id || !name) return;
-
-        this.cache.set(id, of(name));
+        if (id && name) {
+            this.cache.set(id, of(name));
+        }
     }
 }

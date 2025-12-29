@@ -9,9 +9,6 @@ export interface PostResponse {
 
     readonly authorId: string;
 
-    // ✅ NEW FIELD, 
-    readonly authorDisplayName: string;
-
     readonly createdAt: string;
     readonly updatedAt: string;
     readonly isFeatured: boolean;

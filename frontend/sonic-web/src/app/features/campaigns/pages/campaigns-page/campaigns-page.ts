@@ -1,22 +1,19 @@
 import { Component, DestroyRef, computed, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { finalize } from 'rxjs';
 
 import { PostResponse } from '../../../../shared/contracts/post/post-response';
 import { AuthStateService } from '../../../../core/auth/auth-state.service';
-import { CampaignsQuery, CampaignsService } from '../../../../core/campaign/campaign-service';
-
-type ApiProblem = {
-  title?: string;
-  status?: number;
-  detail?: string;
-  code?: string;
-};
+import { CampaignsQuery, CampaignsService } from '../../../../core/campaign/campaign.service';
+import { ProblemDetails } from '../../../../core/http/problem-details';
 
 @Component({
   selector: 'sonic-campaigns-page',
   standalone: true,
-  imports: [RouterLink],
+  imports: [CommonModule, RouterLink, FormsModule],
   templateUrl: './campaigns-page.html',
   styleUrl: './campaigns-page.scss',
 })
@@ -26,71 +23,71 @@ export class CampaignsPage {
   private readonly authState = inject(AuthStateService);
   private readonly destroyRef = inject(DestroyRef);
 
+  // --- UI State ---
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
-  readonly errorCode = signal<string | null>(null);
 
+  // --- Data ---
   readonly page = signal(1);
   readonly pageSize = signal(10);
   readonly totalItems = signal(0);
   readonly items = signal<readonly PostResponse[]>([]);
 
-  readonly canLoadMore = computed(() => this.items().length < this.totalItems());
-
+  // --- Filters ---
   readonly q = signal('');
   readonly featuredOnly = signal(false);
-
   readonly selectedTags = signal<readonly string[]>([]);
   readonly tagDraft = signal('');
 
+  // --- Computed Helpers ---
+  readonly canLoadMore = computed(() => !this.loading() && this.items().length < this.totalItems());
   readonly isAuthed = computed(() => this.authState.isAuthenticated());
 
+  // --- Join Status State ---
+  // Maps to track status per Card ID { [id]: boolean/string }
   readonly joinBusyMap = signal<Record<string, boolean>>({});
   readonly joinedMap = signal<Record<string, boolean>>({});
   readonly joinErrorMap = signal<Record<string, string>>({});
 
-  private readonly statusInflight = new Set<string>();
+  // Cache to prevent duplicate checks for the same ID in this session
+  private readonly statusChecked = new Set<string>();
 
   constructor() {
     this.refresh();
   }
 
+  // --- Actions ---
+
   refresh(): void {
     this.page.set(1);
-    this.items.set([]);
+    this.items.set([]); // Clear list on full refresh
     this.fetchPage({ append: false });
   }
 
   loadMore(): void {
-    if (this.loading() || !this.canLoadMore()) return;
-    this.page.set(this.page() + 1);
+    if (this.loading()) return;
+    this.page.update(p => p + 1);
     this.fetchPage({ append: true });
   }
 
-  onSearchEnter(): void {
-    this.refresh();
-  }
+  onSearchEnter(): void { this.refresh(); }
 
   toggleFeatured(): void {
-    this.featuredOnly.set(!this.featuredOnly());
+    this.featuredOnly.update(v => !v);
     this.refresh();
   }
 
   addTagFromDraft(): void {
     const t = this.tagDraft().trim();
-    if (!t) return;
-    if (t.includes(',')) return;
+    if (!t || t.includes(',')) return;
 
-    const next = new Set(this.selectedTags());
-    next.add(t);
-
-    this.selectedTags.set(Array.from(next));
+    this.selectedTags.update(tags => tags.includes(t) ? tags : [...tags, t]);
     this.tagDraft.set('');
     this.refresh();
   }
 
   removeTag(tag: string): void {
-    this.selectedTags.set(this.selectedTags().filter(x => x !== tag));
+    this.selectedTags.update(tags => tags.filter(x => x !== tag));
     this.refresh();
   }
 
@@ -102,161 +99,117 @@ export class CampaignsPage {
     this.refresh();
   }
 
+  // --- Business Logic ---
+
   joinCampaign(postId: string): void {
-    const id = (postId ?? '').trim();
-    if (!id) return;
+    if (!postId) return;
 
     if (!this.isAuthed()) {
       this.router.navigate(['/account/login'], { queryParams: { returnUrl: this.router.url } });
       return;
     }
 
-    if (this.joinBusyMap()[id] === true) return;
-    if (this.joinedMap()[id] === true) return;
+    if (this.joinBusyMap()[postId] || this.joinedMap()[postId]) return;
 
-    this.setJoinBusy(id, true);
-    this.setJoinError(id, null);
+    // Set Optimistic / Busy UI
+    this.setMapValue(this.joinBusyMap, postId, true);
+    this.setMapValue(this.joinErrorMap, postId, null);
 
-    this.campaigns.join(id)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+    this.campaigns.join(postId)
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.setMapValue(this.joinBusyMap, postId, false))
+      )
       .subscribe({
         next: (resp) => {
-          this.setJoined(id, true);
-          this.setJoinBusy(id, false);
+          this.setMapValue(this.joinedMap, postId, true);
 
-          const nextItems = this.items().map(p => {
-            if (p.id !== id) return p;
-            return { ...p, participantsCount: Number(resp.participantsCount) };
-          });
-          this.items.set(nextItems);
+          // Update the card's participant count locally
+          this.items.update(current =>
+            current.map(p => p.id === postId ? { ...p, participantsCount: Number(resp.participantsCount) } : p)
+          );
         },
-        error: (err: unknown) => {
-          const status = this.getHttpStatus(err);
-          if (status === 401 || status === 403) {
-            this.setJoinBusy(id, false);
-            this.setJoinError(id, 'Login required to join.');
-            return;
-          }
-
-          const { message } = this.extractProblem(err);
-          this.setJoinBusy(id, false);
-          this.setJoinError(id, message);
-        },
+        error: (err: any) => {
+          const pd = err.error as ProblemDetails;
+          this.setMapValue(this.joinErrorMap, postId, pd.detail || 'Unable to join mission.');
+        }
       });
   }
 
   private fetchPage(opts: { append: boolean }): void {
     this.loading.set(true);
     this.error.set(null);
-    this.errorCode.set(null);
 
     const query: CampaignsQuery = {
       page: this.page(),
       pageSize: this.pageSize(),
       tags: this.selectedTags(),
       q: this.q(),
-      featured: this.featuredOnly() ? true : null,
+      featured: this.featuredOnly() || null,
     };
 
     this.campaigns.getCampaigns(query)
-      .pipe(takeUntilDestroyed(this.destroyRef))
+      .pipe(
+        takeUntilDestroyed(this.destroyRef),
+        finalize(() => this.loading.set(false))
+      )
       .subscribe({
         next: (result) => {
           const incoming = result.items ?? [];
-          const nextItems = opts.append ? [...this.items(), ...incoming] : incoming;
 
-          this.items.set(nextItems);
+          if (opts.append) {
+            this.items.update(curr => [...curr, ...incoming]);
+          } else {
+            this.items.set(incoming);
+          }
           this.totalItems.set(result.totalItems ?? 0);
-          this.loading.set(false);
 
+          // Resolve status for new items
           this.resolveJoinedForVisible(incoming);
         },
-        error: (err: unknown) => {
-          const { message, code } = this.extractProblem(err);
-          this.error.set(message);
-          this.errorCode.set(code);
-          this.loading.set(false);
-        },
+        error: (err: any) => {
+          const pd = err.error as ProblemDetails;
+          this.error.set(pd.detail || 'Failed to retrieve campaigns.');
+        }
       });
   }
 
+  /**
+   * Checks "Joined" status for visible cards.
+   * Uses a Set to ensure we don't re-check the same ID multiple times.
+   */
   private resolveJoinedForVisible(posts: readonly PostResponse[]): void {
     if (!this.isAuthed()) return;
 
     for (const p of posts) {
-      const id = (p?.id ?? '').trim();
-      if (!id) continue;
+      // Skip if already joined (known) or already checked in this session
+      if (!p.id || this.joinedMap()[p.id] || this.statusChecked.has(p.id)) continue;
 
-      if (this.joinedMap()[id] === true) continue;
-      if (this.statusInflight.has(id)) continue;
+      this.statusChecked.add(p.id);
 
-      this.statusInflight.add(id);
-
-      this.campaigns.getJoinStatus(id)
+      this.campaigns.getJoinStatus(p.id)
         .pipe(takeUntilDestroyed(this.destroyRef))
         .subscribe({
           next: (resp) => {
-            if (resp.joined) this.setJoined(id, true);
-
-            const nextItems = this.items().map(x => {
-              if (x.id !== id) return x;
-              return { ...x, participantsCount: Number(resp.participantsCount) };
-            });
-            this.items.set(nextItems);
-
-            this.statusInflight.delete(id);
-          },
-          error: (err: unknown) => {
-            this.statusInflight.delete(id);
-
-            const status = this.getHttpStatus(err);
-            if (status === 401 || status === 403) return;
-          },
+            if (resp.joined) {
+              this.setMapValue(this.joinedMap, p.id, true);
+            }
+            // Sync count (Server is source of truth)
+            this.items.update(curr =>
+              curr.map(x => x.id === p.id ? { ...x, participantsCount: Number(resp.participantsCount) } : x)
+            );
+          }
         });
     }
   }
 
-  private setJoinBusy(postId: string, busy: boolean): void {
-    const next = { ...this.joinBusyMap(), [postId]: busy };
-    this.joinBusyMap.set(next);
-  }
-
-  private setJoined(postId: string, joined: boolean): void {
-    const next = { ...this.joinedMap(), [postId]: joined };
-    this.joinedMap.set(next);
-  }
-
-  private setJoinError(postId: string, message: string | null): void {
-    const map = { ...this.joinErrorMap() };
-    if (!message) {
-      delete map[postId];
-      this.joinErrorMap.set(map);
-      return;
-    }
-    map[postId] = message;
-    this.joinErrorMap.set(map);
-  }
-
-  private extractProblem(err: unknown): { message: string; code: string | null } {
-    const anyErr = err as any;
-    const problem: ApiProblem | undefined = anyErr?.error;
-
-    const message =
-      (typeof problem?.detail === 'string' && problem.detail.trim()) ||
-      'Request failed.';
-
-    const code = (typeof problem?.code === 'string' && problem.code.trim()) || null;
-
-    return { message, code };
-  }
-
-  private getHttpStatus(err: unknown): number | null {
-    const anyErr = err as any;
-    if (typeof anyErr?.status === 'number') return anyErr.status;
-
-    const problem: ApiProblem | undefined = anyErr?.error;
-    if (typeof problem?.status === 'number') return problem.status;
-
-    return null;
+  // Type-Safe Map Updater
+  private setMapValue<T>(signalMap: any, key: string, value: T | null): void {
+    signalMap.update((map: Record<string, T>) => {
+      const next = { ...map };
+      if (value === null) delete next[key];
+      else next[key] = value;
+      return next;
+    });
   }
 }

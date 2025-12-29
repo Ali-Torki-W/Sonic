@@ -1,15 +1,22 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
-import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { AbstractControl, FormBuilder, ReactiveFormsModule, ValidationErrors, ValidatorFn, Validators } from '@angular/forms';
 import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
-import { startWith } from 'rxjs/operators';
+import { map, startWith } from 'rxjs/operators';
 
 import { UsersService } from '../../../../core/users/user-service';
 import { CurrentUserStore } from '../../../../core/users/current-user-store';
 import { AuthStateService } from '../../../../core/auth/auth-state.service';
-
 import { GetCurrentUserResponse } from '../../../../shared/contracts/user/get-current-user-response';
 import { UpdateProfileRequest } from '../../../../shared/contracts/user/update-profile-request';
+
+// Moved to a const for reusability/clarity
+const URL_VALIDATOR: ValidatorFn = (control: AbstractControl): ValidationErrors | null => {
+  const v = (control.value || '').trim();
+  if (!v) return null; // Let required validator handle empty checks if needed
+  const valid = v.startsWith('http://') || v.startsWith('https://');
+  return valid ? null : { invalidUrl: true };
+};
 
 type ApiProblem = {
   title?: string;
@@ -26,7 +33,7 @@ type ApiProblem = {
   styleUrl: './profile-page.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class ProfilePage {
+export class ProfilePage implements OnInit {
   private readonly users = inject(UsersService);
   private readonly currentUser = inject(CurrentUserStore);
   private readonly auth = inject(AuthStateService);
@@ -37,85 +44,73 @@ export class ProfilePage {
   // ---- UI state
   readonly loading = signal(false);
   readonly saving = signal(false);
-
   readonly error = signal<string | null>(null);
   readonly errorCode = signal<string | null>(null);
-
   readonly submitted = signal(false);
 
-  // ---- interests (one-by-one)
+  // ---- interests
   readonly interests = signal<readonly string[]>([]);
   readonly interestDraft = signal('');
 
   // ---- form
   readonly form = this.fb.nonNullable.group({
-    displayName: this.fb.nonNullable.control<string>('', { validators: [Validators.required] }),
-    bio: this.fb.nonNullable.control<string>(''),
-    jobRole: this.fb.nonNullable.control<string>(''),
-    avatarUrl: this.fb.nonNullable.control<string>(''),
+    displayName: ['', [Validators.required]],
+    bio: [''],
+    jobRole: [''],
+    avatarUrl: ['', [URL_VALIDATOR]], // Native validation!
   });
 
-  // bridge reactive forms -> signals (for stable computed validity)
+  // ---- Signal Bridges
+  // We only bridge what we need for the template to react to
   private readonly formStatus = toSignal(
     this.form.statusChanges.pipe(startWith(this.form.status)),
     { initialValue: this.form.status }
   );
 
-  private readonly displayNameValue = toSignal(
-    this.form.controls.displayName.valueChanges.pipe(startWith(this.form.controls.displayName.value)),
-    { initialValue: this.form.controls.displayName.value }
-  );
-
-  private readonly avatarUrlValue = toSignal(
-    this.form.controls.avatarUrl.valueChanges.pipe(startWith(this.form.controls.avatarUrl.value)),
-    { initialValue: this.form.controls.avatarUrl.value }
+  // Helper to detect if we should show errors (Touched OR Submitted)
+  private readonly showErrors = computed(() =>
+    this.submitted() || this.formStatus() !== 'PENDING' // simplified trigger
   );
 
   readonly displayNameError = computed(() => {
-    const show = this.submitted() || this.form.controls.displayName.touched;
-    if (!show) return null;
-
-    const v = (this.displayNameValue() ?? '').trim();
-    if (!v) return 'Display name is required.';
+    // We rely on the form control's internal error map now
+    if (!this.showErrors() && !this.form.controls.displayName.touched) return null;
+    if (this.form.controls.displayName.hasError('required')) return 'Display name is required.';
     return null;
   });
 
   readonly avatarUrlError = computed(() => {
-    const show = this.submitted() || this.form.controls.avatarUrl.touched;
-    if (!show) return null;
-
-    const v = (this.avatarUrlValue() ?? '').trim();
-    if (!v) return null;
-
-    // lightweight URL validation (don’t overblock)
-    const ok = v.startsWith('http://') || v.startsWith('https://');
-    return ok ? null : 'Avatar URL must start with http:// or https://';
+    if (!this.showErrors() && !this.form.controls.avatarUrl.touched) return null;
+    // The ValidatorFn logic above sets this error key
+    if (this.form.controls.avatarUrl.hasError('invalidUrl')) return 'Avatar URL must start with http:// or https://';
+    return null;
   });
 
   readonly canSubmit = computed(() => {
     if (this.loading() || this.saving()) return false;
-    if (this.formStatus() !== 'VALID') return false;
-
-    const dn = (this.displayNameValue() ?? '').trim();
-    if (!dn) return false;
-
-    // if avatar provided, it must pass our simple check
-    if (this.avatarUrlError()) return false;
-
-    return true;
+    // Now we can trust the native form validity
+    return this.formStatus() === 'VALID';
   });
 
   constructor() {
-    // Profile is auth required by route guard, but keep it defensive
+    // Optional: Use effect to sync store changes automatically if the store updates elsewhere
+    // effect(() => {
+    //   const me = this.currentUser.me();
+    //   if (me && !this.form.dirty) this.applyMeToForm(me);
+    // });
+  }
+
+  ngOnInit(): void {
+    // 1. Guard Logic (Defensive)
     if (!this.auth.isAuthenticated()) {
       this.router.navigate(['/account/login'], { queryParams: { returnUrl: '/profile' } });
       return;
     }
 
-    // Load from shared store if already available; otherwise fetch
-    this.currentUser.loadIfNeeded(this.destroyRef);
-
+    // 2. Data Loading Strategy
+    this.currentUser.loadIfNeeded();
     const fromStore = this.currentUser.me();
+
     if (fromStore) {
       this.applyMeToForm(fromStore);
     } else {
@@ -124,15 +119,80 @@ export class ProfilePage {
   }
 
   // --------------------
-  // data loading
+  // Actions
   // --------------------
-  private loadMe(): void {
-    this.loading.set(true);
+
+  addInterestFromDraft(): void {
+    const raw = this.interestDraft().trim();
+    if (!raw || raw.includes(',')) return;
+
+    // Use update for cleaner set logic
+    this.interests.update(current => {
+      const next = new Set(current);
+      next.add(raw);
+      return Array.from(next);
+    });
+
+    this.interestDraft.set('');
+  }
+
+  removeInterest(value: string): void {
+    this.interests.update(current => current.filter(x => x !== value));
+  }
+
+  save(): void {
+    this.submitted.set(true);
     this.error.set(null);
     this.errorCode.set(null);
 
-    this.users
-      .getMe()
+    // Form validation check is now aligned with Native Forms
+    if (this.form.invalid) {
+      this.form.markAllAsTouched();
+      return;
+    }
+
+    this.saving.set(true);
+    const formVal = this.form.getRawValue();
+
+    const req: UpdateProfileRequest = {
+      displayName: formVal.displayName.trim(),
+      bio: this.nullIfBlank(formVal.bio),
+      jobRole: this.nullIfBlank(formVal.jobRole),
+      avatarUrl: this.nullIfBlank(formVal.avatarUrl),
+      interests: this.interests().map(x => x.trim()).filter(Boolean),
+    };
+
+    this.users.updateMe(req)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (updated) => {
+          this.currentUser.set(updated);
+          this.applyMeToForm(updated); // Resets 'dirty' state conceptually
+          this.saving.set(false);
+          this.submitted.set(false);
+          this.form.markAsPristine(); // Important: Mark form pristine after save
+        },
+        error: (err) => this.handleError(err)
+      });
+  }
+
+  cancel(): void {
+    const me = this.currentUser.me();
+    if (me) {
+      this.applyMeToForm(me);
+      this.form.markAsPristine();
+    }
+    this.submitted.set(false);
+    this.error.set(null);
+  }
+
+  // --------------------
+  // Helpers
+  // --------------------
+
+  private loadMe(): void {
+    this.loading.set(true);
+    this.users.getMe()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (me) => {
@@ -140,18 +200,7 @@ export class ProfilePage {
           this.applyMeToForm(me);
           this.loading.set(false);
         },
-        error: (err: unknown) => {
-          const status = this.getHttpStatus(err);
-          if (status === 401 || status === 403) {
-            this.router.navigate(['/account/login'], { queryParams: { returnUrl: '/profile' } });
-            return;
-          }
-
-          const { message, code } = this.extractProblem(err);
-          this.error.set(message);
-          this.errorCode.set(code);
-          this.loading.set(false);
-        },
+        error: (err) => this.handleError(err)
       });
   }
 
@@ -162,116 +211,37 @@ export class ProfilePage {
       jobRole: me.jobRole ?? '',
       avatarUrl: me.avatarUrl ?? '',
     });
-
     this.interests.set(Array.isArray(me.interests) ? me.interests : []);
   }
 
-  // --------------------
-  // interests
-  // --------------------
-  addInterestFromDraft(): void {
-    const raw = this.interestDraft().trim();
-    if (!raw) return;
+  private handleError(err: unknown): void {
+    this.loading.set(false);
+    this.saving.set(false);
 
-    // enforce one-by-one (same rule as tags)
-    if (raw.includes(',')) return;
-
-    const next = new Set(this.interests());
-    next.add(raw);
-
-    this.interests.set(Array.from(next));
-    this.interestDraft.set('');
-  }
-
-  removeInterest(value: string): void {
-    const v = (value ?? '').trim();
-    if (!v) return;
-    this.interests.set(this.interests().filter(x => x !== v));
-  }
-
-  // --------------------
-  // save
-  // --------------------
-  save(): void {
-    this.submitted.set(true);
-    this.error.set(null);
-    this.errorCode.set(null);
-
-    if (!this.canSubmit()) {
-      this.form.markAllAsTouched();
+    const status = this.getHttpStatus(err);
+    if (status === 401 || status === 403) {
+      this.router.navigate(['/account/login'], { queryParams: { returnUrl: '/profile' } });
       return;
     }
 
-    this.saving.set(true);
-
-    const req: UpdateProfileRequest = {
-      displayName: (this.form.controls.displayName.value ?? '').trim(),
-      bio: this.nullIfBlank(this.form.controls.bio.value),
-      jobRole: this.nullIfBlank(this.form.controls.jobRole.value),
-      avatarUrl: this.nullIfBlank(this.form.controls.avatarUrl.value),
-      interests: this.interests().map(x => x.trim()).filter(Boolean),
-    };
-
-    this.users
-      .updateMe(req)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe({
-        next: (updated) => {
-          // update shared store so header/avatar updates instantly
-          this.currentUser.set(updated);
-
-          // re-apply to form (normalize)
-          this.applyMeToForm(updated);
-
-          this.saving.set(false);
-          this.submitted.set(false);
-        },
-        error: (err: unknown) => {
-          const { message, code } = this.extractProblem(err);
-          this.error.set(message);
-          this.errorCode.set(code);
-          this.saving.set(false);
-        },
-      });
+    const { message, code } = this.extractProblem(err);
+    this.error.set(message);
+    this.errorCode.set(code);
   }
 
-  cancel(): void {
-    // revert to latest store snapshot
-    const me = this.currentUser.me();
-    if (me) this.applyMeToForm(me);
-    this.submitted.set(false);
-    this.error.set(null);
-    this.errorCode.set(null);
-  }
-
-  // --------------------
-  // helpers
-  // --------------------
   private nullIfBlank(v: string): string | null {
-    const x = (v ?? '').trim();
-    return x.length ? x : null;
+    return (v || '').trim() || null;
   }
 
-  private extractProblem(err: unknown): { message: string; code: string | null } {
-    const anyErr = err as any;
-    const problem: ApiProblem | undefined = anyErr?.error;
-
-    const message =
-      (typeof problem?.detail === 'string' && problem.detail.trim()) ||
-      (typeof anyErr?.message === 'string' && anyErr.message.trim()) ||
-      'Request failed.';
-
-    const code = (typeof problem?.code === 'string' && problem.code.trim()) || null;
-    return { message, code };
+  private extractProblem(err: any): { message: string; code: string | null } {
+    const problem: ApiProblem = err?.error;
+    return {
+      message: problem?.detail || err?.message || 'Request failed.',
+      code: problem?.code || null
+    };
   }
 
-  private getHttpStatus(err: unknown): number | null {
-    const anyErr = err as any;
-    if (typeof anyErr?.status === 'number') return anyErr.status;
-
-    const problem: ApiProblem | undefined = anyErr?.error;
-    if (typeof problem?.status === 'number') return problem.status;
-
-    return null;
+  private getHttpStatus(err: any): number | null {
+    return err?.status || err?.error?.status || null;
   }
 }
