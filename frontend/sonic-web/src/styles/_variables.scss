@@ -1,9 +1,35 @@
 :root {
-    --sonic-bg: #0b0f19;
-    --sonic-surface: #121a2a;
-    --sonic-text: #e8eefc;
-    --sonic-muted: #a9b4cc;
-    --sonic-border: rgba(255, 255, 255, 0.08);
-    --sonic-radius: 14px;
-    --sonic-maxw: 1100px;
+    /* --- The Void (Backgrounds) --- */
+    --sonic-bg: #05080f;
+    /* Darker than before for depth */
+    --sonic-surface: #0f1525;
+    /* Card background */
+    --sonic-surface-glass: rgba(15, 21, 37, 0.85);
+    /* For blur effects */
+
+    /* --- Starlight (Text) --- */
+    --sonic-text-main: #ffffff;
+    --sonic-text-muted: #94a3b8;
+    --sonic-text-glow: rgba(255, 255, 255, 0.8);
+
+    /* --- Nebulas (Accents) --- */
+    --sonic-primary: #00e0ff;
+    /* Electric Cyan */
+    --sonic-primary-dim: rgba(0, 224, 255, 0.15);
+
+    --sonic-secondary: #a855f7;
+    /* Cosmic Purple */
+    --sonic-secondary-dim: rgba(168, 85, 247, 0.15);
+
+    /* --- Structure --- */
+    --sonic-border: rgba(0, 224, 255, 0.15);
+    /* Subtle cyan tint borders */
+    --sonic-radius-lg: 16px;
+    --sonic-radius-pill: 99px;
+    --sonic-maxw: 1400px;
+    --topbar-h: 72px;
+
+    /* --- Fonts --- */
+    --font-head: 'Orbitron', sans-serif;
+    --font-body: 'Exo 2', sans-serif;
 }

@@ -1,104 +1,122 @@
 <section class="cp">
-    <header class="cp__top">
-        <div>
-            <h1>Campaigns</h1>
-            <p class="muted">Join community campaigns. Track participation.</p>
+    <div class="cp__wrap">
+        <header class="cp__header">
+            <h1>Active Campaigns</h1>
+            <p class="muted">Select a campaign. Track collective progress.</p>
+        </header>
+
+        <div class="cp__filters">
+            <div class="search-group">
+                <input class="input-search" type="text" [(ngModel)]="q" (keydown.enter)="onSearchEnter()"
+                    placeholder="Search campaign parameters..." />
+            </div>
+
+            <div class="filter-actions">
+                <button type="button" class="btn btn--toggle" [class.active]="featuredOnly()"
+                    (click)="toggleFeatured()">
+                    {{ featuredOnly() ? 'Featured: ON' : 'Featured: OFF' }}
+                </button>
+
+                <button type="button" class="btn btn--ghost" (click)="clearFilters()">Reset</button>
+            </div>
         </div>
-    </header>
 
-    <div class="cp__filters">
-        <input class="cp__input" type="text" [value]="q()" (input)="q.set(($any($event.target)).value)"
-            (keydown.enter)="onSearchEnter()" placeholder="Search campaigns…" />
-
-        <button type="button" class="cp__btn" (click)="toggleFeatured()">
-            @if (featuredOnly()) { Featured: On } @else { Featured: Off }
-        </button>
-
-        <div class="cp__tagRow">
-            <input class="cp__input" type="text" [value]="tagDraft()"
-                (input)="tagDraft.set(($any($event.target)).value)"
-                (keydown.enter)="$event.preventDefault(); addTagFromDraft()" placeholder="Add one tag…" />
-            <button type="button" class="cp__btn" (click)="addTagFromDraft()">Add tag</button>
-            <button type="button" class="cp__btn cp__btn--ghost" (click)="clearFilters()">Clear</button>
+        <div class="cp__tags-input">
+            <input class="input-tag" type="text" [(ngModel)]="tagDraft"
+                (keydown.enter)="$event.preventDefault(); addTagFromDraft()" placeholder="Add tag filter..." />
+            <button class="btn btn--ghost btn--sm" (click)="addTagFromDraft()">+ Add</button>
         </div>
 
         @if (selectedTags().length) {
-        <div class="cp__tags">
+        <div class="active-tags">
             @for (t of selectedTags(); track t) {
-            <button type="button" class="cp__tag" (click)="removeTag(t)">
-                #{{ t }} ✕
+            <button class="tag-chip" (click)="removeTag(t)">
+                #{{ t }} <span class="x">✕</span>
             </button>
             }
         </div>
         }
 
-        @if (tagDraft().includes(',')) {
-        <div class="cp__hint">One tag at a time. No commas.</div>
+        @if (loading() && items().length === 0) {
+        <div class="cp__state">
+            <div class="spinner"></div>
+            <p>Scanning network...</p>
+        </div>
+        }
+        @else if (error()) {
+        <div class="cp__alert">
+            <span class="icon">⚠</span> {{ error() }}
+        </div>
+        }
+        @else if (items().length === 0) {
+        <div class="cp__state">
+            <p>No active campaigns found matching criteria.</p>
+        </div>
+        }
+        @else {
+        <div class="cp__grid">
+            @for (p of items(); track p.id) {
+            <article class="mission-card">
+                <div class="mission-head">
+                    <h2 class="mission-title">
+                        <a [routerLink]="['/posts', p.id]">{{ p.title }}</a>
+                    </h2>
+                    <div class="mission-meta">
+                        <span class="stat">
+                            <span class="icon">👤</span> {{ p.participantsCount }} Agents
+                        </span>
+                    </div>
+                </div>
+
+                @if (p.campaignGoal) {
+                <div class="mission-objective">
+                    <span class="label">Primary Objective</span>
+                    <div class="value">{{ p.campaignGoal }}</div>
+                </div>
+                }
+
+                @if (p.tags.length) {
+                <div class="mission-tags">
+                    @for (t of p.tags; track t) {
+                    <span class="mini-tag">#{{ t }}</span>
+                    }
+                </div>
+                }
+
+                <div class="mission-actions">
+                    @if (!isAuthed()) {
+                    <button class="btn btn--solid btn--block" (click)="joinCampaign(p.id)">
+                        Login to Join
+                    </button>
+                    } @else {
+                    <button class="btn btn--block" [class.btn--solid]="!joinedMap()[p.id]"
+                        [class.btn--ghost]="joinedMap()[p.id]" (click)="joinCampaign(p.id)"
+                        [disabled]="joinBusyMap()[p.id] || joinedMap()[p.id]">
+                        @if (joinBusyMap()[p.id]) {
+                        Processing...
+                        } @else if (joinedMap()[p.id]) {
+                        ✓ Active Agent
+                        } @else {
+                        Initialize Join
+                        }
+                    </button>
+                    }
+                </div>
+
+                @if (joinErrorMap()[p.id]) {
+                <div class="mission-error">{{ joinErrorMap()[p.id] }}</div>
+                }
+            </article>
+            }
+        </div>
+
+        @if (canLoadMore()) {
+        <div class="cp__footer">
+            <button class="btn btn--ghost btn--wide" (click)="loadMore()" [disabled]="loading()">
+                @if (loading()) { Loading data... } @else { Load More Missions }
+            </button>
+        </div>
+        }
         }
     </div>
-
-    @if (loading() && items().length === 0) {
-    <div class="cp__panel">Loading…</div>
-    } @else {
-
-    @if (error()) {
-    <div class="cp__panel cp__panel--error">
-        <div>Error: {{ error() }}</div>
-        @if (errorCode()) { <div class="muted">code: {{ errorCode() }}</div> }
-    </div>
-    }
-
-    @if (items().length === 0) {
-    <div class="cp__panel">No campaigns found.</div>
-    } @else {
-    <div class="cp__list">
-        @for (p of items(); track p.id) {
-        <article class="cp__card">
-            <div class="cp__head">
-                <a class="cp__title" [routerLink]="['/posts', p.id]">{{ p.title }}</a>
-                <div class="muted">Participants: {{ p.participantsCount }}</div>
-            </div>
-
-            @if (p.campaignGoal) {
-            <div class="cp__goal">{{ p.campaignGoal }}</div>
-            }
-
-            @if (p.tags.length) {
-            <div class="cp__tagsSmall">
-                @for (t of p.tags; track t) {
-                <span class="cp__tagSmall">#{{ t }}</span>
-                }
-            </div>
-            }
-
-            <div class="cp__actions">
-                @if (!isAuthed()) {
-                <button type="button" class="cp__btn" (click)="joinCampaign(p.id)">
-                    Login to join
-                </button>
-                } @else {
-                <button type="button" class="cp__btn" (click)="joinCampaign(p.id)"
-                    [disabled]="joinBusyMap()[p.id] === true || joinedMap()[p.id] === true">
-                    @if (joinBusyMap()[p.id] === true) { Joining… }
-                    @else { @if (joinedMap()[p.id] === true) { Joined } @else { Join } }
-                </button>
-                }
-            </div>
-
-            @if (joinErrorMap()[p.id]) {
-            <div class="cp__inlineError">{{ joinErrorMap()[p.id] }}</div>
-            }
-        </article>
-        }
-    </div>
-
-    @if (canLoadMore()) {
-    <div class="cp__more">
-        <button type="button" class="cp__btn cp__btn--ghost" (click)="loadMore()" [disabled]="loading()">
-            @if (loading()) { Loading… } @else { Load more }
-        </button>
-    </div>
-    }
-    }
-    }
 </section>

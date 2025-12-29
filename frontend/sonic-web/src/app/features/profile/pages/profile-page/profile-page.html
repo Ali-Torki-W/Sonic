@@ -1,90 +1,122 @@
-<section class="profile">
-    <header class="profile__top">
-        <div>
-            <h1>Profile</h1>
-            <p class="muted">Update your public information.</p>
+<section class="pf">
+    <div class="pf__wrap">
+
+        <header class="pf__header">
+            <h1 class="pf__title">Dashboard</h1>
+            <p class="pf__subtitle">Manage and update your public credentials.</p>
+        </header>
+
+        @if (loading()) {
+        <div class="pf__card pf__card--loading">
+            <div class="spinner"></div>
+            <p>Retrieving personnel file...</p>
         </div>
-
-        <div class="profile__actions">
-            <a class="btn btn--ghost" routerLink="/feed">Back</a>
+        }
+        @else if (error()) {
+        <div class="pf__alert">
+            <div class="icon">⚠</div>
+            <div class="content">
+                <strong>System Error:</strong> {{ error() }}
+                @if (errorCode()) { <span class="code">Code: {{ errorCode() }}</span> }
+            </div>
         </div>
-    </header>
+        }
+        @else {
+        <form class="pf__card" [formGroup]="form" (ngSubmit)="save()">
 
-    @if (loading()) {
-    <div class="panel">
-        <p class="muted">Loading…</p>
-    </div>
-    } @else {
+            <div class="form-section">
+                <h3 class="section-title">Visual Identity</h3>
 
-    @if (error()) {
-    <div class="panel panel--error">
-        <p class="error-text">{{ error() }}</p>
-        @if (errorCode()) { <p class="muted">code: {{ errorCode() }}</p> }
-    </div>
-    }
+                <div class="avatar-row">
+                    <div class="avatar-preview">
+                        @if (form.get('avatarUrl')?.value) {
+                        <img [src]="form.get('avatarUrl')?.value" alt="Preview"
+                            onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'" />
+                        <div class="avatar-fallback" style="display: none">{{ form.get('displayName')?.value?.slice(0,1)
+                            || '?' }}</div>
+                        } @else {
+                        <div class="avatar-fallback">{{ form.get('displayName')?.value?.slice(0,1) || '?' }}</div>
+                        }
+                    </div>
 
-    <form class="panel" [formGroup]="form" (ngSubmit)="save()">
-        <div class="field">
-            <label class="label">Display name</label>
-            <input class="input" formControlName="displayName" placeholder="Your name" />
-            @if (displayNameError()) {
-            <p class="field-error">{{ displayNameError() }}</p>
-            }
-        </div>
+                    <div class="field field--grow">
+                        <label class="label"><span class="icon">🖼</span> Avatar Uplink (URL)</label>
+                        <input class="input" formControlName="avatarUrl" placeholder="https://..." />
+                        @if (avatarUrlError()) {
+                        <p class="field-error">{{ avatarUrlError() }}</p>
+                        }
+                    </div>
+                </div>
 
-        <div class="field">
-            <label class="label">Bio (optional)</label>
-            <textarea class="input input--textarea" rows="4" formControlName="bio"
-                placeholder="A short bio…"></textarea>
-        </div>
-
-        <div class="field">
-            <label class="label">Job role (optional)</label>
-            <input class="input" formControlName="jobRole" placeholder="e.g. Backend Developer" />
-        </div>
-
-        <div class="field">
-            <label class="label">Avatar URL (optional)</label>
-            <input class="input" formControlName="avatarUrl" placeholder="https://…" />
-            @if (avatarUrlError()) {
-            <p class="field-error">{{ avatarUrlError() }}</p>
-            }
-        </div>
-
-        <div class="field">
-            <label class="label">Interests</label>
-
-            <div class="tag-row">
-                <input class="input" [value]="interestDraft()" (input)="interestDraft.set(($any($event.target)).value)"
-                    (keydown.enter)="$event.preventDefault(); addInterestFromDraft()"
-                    placeholder="Add one interest, press Enter…" />
-                <button class="btn btn--solid" type="button" (click)="addInterestFromDraft()">Add</button>
+                <div class="field">
+                    <label class="label"><span class="icon">👤</span> Display Name</label>
+                    <input class="input" formControlName="displayName" placeholder="Agent Name" />
+                    @if (displayNameError()) {
+                    <p class="field-error">{{ displayNameError() }}</p>
+                    }
+                </div>
             </div>
 
-            @if (interestDraft().includes(',')) {
-            <p class="hint hint--warn">One at a time. No commas.</p>
-            }
+            <div class="divider"></div>
 
-            @if (interests().length > 0) {
-            <div class="tag-list">
-                @for (x of interests(); track x) {
-                <button class="tag" type="button" (click)="removeInterest(x)" title="Remove">
-                    {{ x }} <span class="tag__x">×</span>
-                </button>
+            <div class="form-section">
+                <h3 class="section-title">Professional Data</h3>
+
+                <div class="field">
+                    <label class="label"><span class="icon">💼</span> Designation / Role</label>
+                    <input class="input" formControlName="jobRole" placeholder="e.g. Senior Architect" />
+                </div>
+
+                <div class="field">
+                    <label class="label"><span class="icon">📝</span> Bio / Dossier</label>
+                    <textarea class="input input--textarea" rows="4" formControlName="bio"
+                        placeholder="Brief operational history..."></textarea>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <label class="label"><span class="icon">⚡</span> Specializations (Interests)</label>
+
+                <div class="tag-input-group">
+                    <input class="input" [value]="interestDraft()"
+                        (input)="interestDraft.set(($any($event.target)).value)"
+                        (keydown.enter)="$event.preventDefault(); addInterestFromDraft()"
+                        placeholder="Add specialization..." />
+                    <button class="btn btn--ghost" type="button" (click)="addInterestFromDraft()">Add</button>
+                </div>
+
+                @if (interestDraft().includes(',')) {
+                <p class="hint hint--warn">One item at a time.</p>
                 }
+
+                <div class="tag-area">
+                    @if (interests().length > 0) {
+                    <div class="tag-list">
+                        @for (x of interests(); track x) {
+                        <button class="tag-chip" type="button" (click)="removeInterest(x)" title="Remove">
+                            {{ x }} <span class="x">✕</span>
+                        </button>
+                        }
+                    </div>
+                    } @else {
+                    <p class="muted-text">No specializations recorded.</p>
+                    }
+                </div>
             </div>
-            } @else {
-            <p class="muted">No interests yet.</p>
-            }
-        </div>
 
-        <div class="footer">
-            <button class="btn btn--ghost" type="button" (click)="cancel()" [disabled]="saving()">Cancel</button>
-            <button class="btn btn--solid" type="submit" [disabled]="!canSubmit()">
-                @if (saving()) { Saving… } @else { Save changes }
-            </button>
-        </div>
-    </form>
-
-    }
+            <footer class="pf__footer">
+                <button class="btn btn--ghost" type="button" (click)="cancel()" [disabled]="saving()">
+                    Cancel
+                </button>
+                <button class="btn btn--solid" type="submit" [disabled]="!canSubmit()">
+                    @if (saving()) {
+                    <span class="spinner-sm"></span> Saving...
+                    } @else {
+                    Update Profile
+                    }
+                </button>
+            </footer>
+        </form>
+        }
+    </div>
 </section>

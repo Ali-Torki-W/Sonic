@@ -1,118 +1,122 @@
-<section class="editor">
-    <header class="editor__header">
-        <div class="editor__title">
-            <h1>@if (isEdit()) { Edit post } @else { Create post }</h1>
-            <p class="muted">
-                @if (isEdit()) { Update your post content. } @else { Share something with the community. }
+<section class="pe">
+    <div class="pe__wrap">
+        <header class="pe__header">
+            <h1 class="pe__title">
+                @if (isEdit()) { Edit Post } @else { Create Post }
+            </h1>
+            <p class="pe__subtitle">
+                @if (isEdit()) { Update your content details. } @else { Share your thoughts with the network. }
             </p>
+        </header>
+
+        @if (loading()) {
+        <div class="pe__card pe__card--loading">
+            <div class="spinner"></div>
+            <p>Initializing editor...</p>
         </div>
-    </header>
-
-    @if (loading()) {
-    <div class="panel">
-        <p class="muted">Loading…</p>
-    </div>
-    } @else {
-
-    @if (permissionError()) {
-    <div class="panel panel--error">
-        <p class="error-text">{{ permissionError() }}</p>
-        <p class="muted">code: auth.forbidden</p>
-        <div class="footer">
-            <button class="btn btn--ghost" type="button" (click)="cancel()">Back</button>
-        </div>
-    </div>
-    } @else {
-
-    @if (apiError()) {
-    <div class="panel panel--error">
-        <p class="error-text">{{ apiError() }}</p>
-        @if (apiErrorCode()) {
-        <p class="muted">code: {{ apiErrorCode() }}</p>
         }
-    </div>
-    }
+        @else if (permissionError()) {
+        <div class="pe__card pe__card--error">
+            <div class="error-icon">🚫</div>
+            <div class="error-content">
+                <h3>Access Denied</h3>
+                <p>{{ permissionError() }}</p>
+                <button class="btn btn--ghost" type="button" (click)="cancel()">Go Back</button>
+            </div>
+        </div>
+        }
+        @else {
 
-    <form class="panel" [formGroup]="form" (ngSubmit)="submit()">
-        @if (!isEdit()) {
-        <div class="field">
-            <label class="label">Post type</label>
-            <select class="input" formControlName="type">
-                @for (t of typeOptions; track t) {
-                <option [value]="t">{{ t }}</option>
+        @if (apiError()) {
+        <div class="pe__alert">
+            <strong>Error:</strong> {{ apiError() }}
+            @if (apiErrorCode()) { <span>code: {{ apiErrorCode() }}</span> }
+        </div>
+        }
+
+        <form class="pe__card" [formGroup]="form" (ngSubmit)="submit()">
+
+            <div class="field">
+                <label class="label">Post Classification</label>
+                @if (!isEdit()) {
+                <div class="select-wrap">
+                    <select class="input input--select" formControlName="type">
+                        @for (t of typeOptions; track t) {
+                        <option [value]="t">{{ t }}</option>
+                        }
+                    </select>
+                </div>
+                } @else {
+                <input class="input" [value]="effectiveType()" disabled readonly />
                 }
-            </select>
-        </div>
-        } @else {
-        <div class="field">
-            <label class="label">Post type</label>
-            <input class="input" [value]="effectiveType()" disabled />
-        </div>
-        }
-
-        <div class="field">
-            <label class="label">Title</label>
-            <input class="input" formControlName="title" placeholder="Give your post a title…" />
-            @if (titleError()) {
-            <p class="field-error">{{ titleError() }}</p>
-            }
-        </div>
-
-        <div class="field">
-            <label class="label">Body</label>
-            <textarea class="input input--textarea" formControlName="body" rows="8"
-                placeholder="Write your post…"></textarea>
-            @if (bodyError()) {
-            <p class="field-error">{{ bodyError() }}</p>
-            }
-        </div>
-
-        <div class="field">
-            <label class="label">Tags</label>
-
-            <div class="tag-row">
-                <input class="input" [value]="tagDraft()" (input)="tagDraft.set(($any($event.target)).value)"
-                    (keydown.enter)="$event.preventDefault(); addTagFromDraft()"
-                    placeholder="Add one tag, press Enter…" />
-                <button class="btn btn--solid" type="button" (click)="addTagFromDraft()">Add</button>
             </div>
 
-            @if (tagDraft().includes(',')) {
-            <p class="hint hint--warn">One tag at a time. No commas.</p>
+            <div class="field">
+                <label class="label">Title</label>
+                <input class="input" formControlName="title" placeholder="Enter a descriptive title..." />
+                @if (titleError()) {
+                <p class="field-error">{{ titleError() }}</p>
+                }
+            </div>
+
+            <div class="field">
+                <label class="label">Content</label>
+                <textarea class="input input--textarea" formControlName="body" rows="12"
+                    placeholder="Write your content here..."></textarea>
+                @if (bodyError()) {
+                <p class="field-error">{{ bodyError() }}</p>
+                }
+            </div>
+
+            <div class="field">
+                <label class="label">Tags</label>
+
+                <div class="tag-input-row">
+                    <input class="input" [value]="tagDraft()" (input)="tagDraft.set(($any($event.target)).value)"
+                        (keydown.enter)="$event.preventDefault(); addTagFromDraft()"
+                        placeholder="Type tag and press Enter" />
+                    <button class="btn btn--ghost" type="button" (click)="addTagFromDraft()">Add</button>
+                </div>
+
+                @if (tagDraft().includes(',')) {
+                <p class="hint hint--warn">One tag at a time. No commas.</p>
+                }
+
+                @if (selectedTags().length > 0) {
+                <div class="tag-list">
+                    @for (t of selectedTags(); track t) {
+                    <button class="tag-chip" type="button" (click)="removeTag(t)" title="Remove">
+                        #{{ t }} <span class="x">✕</span>
+                    </button>
+                    }
+                </div>
+                }
+            </div>
+
+            <div class="field">
+                <label class="label">External Link <span class="optional">(Optional)</span></label>
+                <input class="input" formControlName="externalLink" placeholder="https://..." />
+            </div>
+
+            @if (isCampaign()) {
+            <div class="field field--highlight">
+                <label class="label">Campaign Goal</label>
+                <input class="input" formControlName="campaignGoal" placeholder="e.g. 'Clean 50 parks'" />
+                <p class="hint">Define the objective for this campaign.</p>
+            </div>
             }
 
-            @if (selectedTags().length > 0) {
-            <div class="tag-list">
-                @for (t of selectedTags(); track t) {
-                <button class="tag" type="button" (click)="removeTag(t)" title="Remove tag">
-                    #{{ t }} <span class="tag__x">×</span>
+            <footer class="pe__footer">
+                <button class="btn btn--ghost" type="button" (click)="cancel()">Cancel</button>
+                <button class="btn btn--solid" type="submit" [disabled]="!canSubmit()">
+                    @if (saving()) {
+                    <span class="spinner-sm"></span> Saving...
+                    } @else {
+                    {{ isEdit() ? 'Save Changes' : 'Publish Post' }}
+                    }
                 </button>
-                }
-            </div>
-            }
-        </div>
-
-        <div class="field">
-            <label class="label">External link (optional)</label>
-            <input class="input" formControlName="externalLink" placeholder="https://…" />
-        </div>
-
-        @if (isCampaign()) {
-        <div class="field">
-            <label class="label">Campaign goal</label>
-            <input class="input" formControlName="campaignGoal" placeholder="What is the campaign goal?" />
-            <p class="hint">Only campaigns have a goal. This field won’t exist for other post types.</p>
-        </div>
+            </footer>
+        </form>
         }
-
-        <div class="footer">
-            <button class="btn btn--ghost" type="button" (click)="cancel()">Cancel</button>
-            <button class="btn btn--solid" type="submit" [disabled]="!canSubmit()">
-                @if (saving()) { Saving… } @else { Publish }
-            </button>
-        </div>
-    </form>
-
-    }
-    }
+    </div>
 </section>

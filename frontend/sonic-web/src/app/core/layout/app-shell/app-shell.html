@@ -1,18 +1,22 @@
 <header class="topbar">
-    <!-- Cosmic Background Elements -->
     <div class="stars"></div>
     <div class="cosmic-element cosmic-element--1"></div>
     <div class="cosmic-element cosmic-element--2"></div>
 
     <div class="sonic-container topbar__row">
-        <button class="icon-btn burger" type="button" (click)="toggleMobile()" aria-label="Open menu">☰</button>
+        <button class="burger" type="button" (click)="toggleMobile()" aria-label="Open menu">
+            <span class="burger-line"></span>
+            <span class="burger-line"></span>
+        </button>
 
-        <a class="brand">Sonic</a>
+        <a class="brand" routerLink="/">Sonic</a>
 
-        <nav class="nav desktop">
+        <nav class="nav desktop nav-spotlight-group">
+            <div class="spotlight-overlay"></div>
+
             @for (link of navLinks; track link.label) {
-            <a class="nav__link" [routerLink]="link.path" [queryParams]="link.queryParams ?? null"
-                routerLinkActive="active">
+            <a class="nav__link" [routerLink]="link.path" routerLinkActive="active"
+                [routerLinkActiveOptions]="{ exact: !!link.exact }">
                 {{ link.label }}
             </a>
             }
@@ -22,25 +26,30 @@
 
         <div class="auth desktop">
             @if (!isAuthenticated()) {
-            <a class="btn btn--ghost" routerLink="/account/login">Login</a>
-            <a class="btn btn--solid" routerLink="/account/register">Register</a>
+            <a class="btn btn--ghost" routerLink="/account/login">Log In</a>
+            <a class="btn btn--solid" routerLink="/account/register">Sign Up</a>
             } @else {
-            <a class="btn btn--ghost" routerLink="/posts/new">Create</a>
+            <a class="btn btn--create" routerLink="/posts/new">
+                <span class="plus">+</span> Create
+            </a>
 
-            <!-- Avatar-style Profile button (replaces plain "Profile") -->
             <a class="profile-chip" routerLink="/profile" aria-label="Profile">
                 @if (avatarUrl()) {
                 <img class="profile-chip__img" [src]="avatarUrl()" alt="Avatar" />
                 } @else {
-                <span class="profile-chip__fallback" aria-hidden="true">{{ initial() }}</span>
+                <div class="profile-chip__fallback">{{ initial() }}</div>
                 }
-
-                <span class="profile-chip__name">
-                    {{ displayName() ?? 'Profile' }}
-                </span>
+                <span class="profile-chip__text">{{ displayName() || 'Profile' }}</span>
             </a>
 
-            <button class="btn btn--solid" type="button" (click)="logout()">Logout</button>
+            <button class="icon-btn" (click)="logout()" title="Logout">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+            </button>
             }
         </div>
     </div>
@@ -50,37 +59,40 @@
 
         <aside class="drawer__panel" role="dialog" aria-modal="true" aria-label="Navigation">
             <div class="drawer__header">
-                <a class="brand" routerLink="/" (click)="closeMobile()">Sonic</a>
+                <a class="brand" (click)="closeMobile()">Sonic</a>
                 <button class="icon-btn" type="button" (click)="closeMobile()" aria-label="Close menu">✕</button>
             </div>
 
             <nav class="drawer__nav">
-                @for (link of navLinks; track link.label) {
-                <a class="drawer__link" [routerLink]="link.path" [queryParams]="link.queryParams ?? null"
-                    routerLinkActive="active" (click)="closeMobile()">
+                @for (link of navLinks; track link.label; let i = $index) {
+                <a class="drawer__link" [routerLink]="link.path" routerLinkActive="active"
+                    [routerLinkActiveOptions]="{ exact: !!link.exact }" (click)="closeMobile()" [style.--i]="i">
                     {{ link.label }}
                 </a>
                 }
             </nav>
 
-            <div class="drawer__auth">
+            <div class="drawer__footer">
                 @if (!isAuthenticated()) {
-                <a class="btn btn--ghost btn--block" routerLink="/account/login" (click)="closeMobile()">Login</a>
-                <a class="btn btn--solid btn--block" routerLink="/account/register" (click)="closeMobile()">Register</a>
+                <a class="btn btn--ghost btn--block" routerLink="/account/login" (click)="closeMobile()">Log In</a>
+                <a class="btn btn--solid btn--block" routerLink="/account/register" (click)="closeMobile()">Sign Up</a>
                 } @else {
-                <a class="btn btn--ghost btn--block" routerLink="/posts/new" (click)="closeMobile()">Create</a>
-
-                <!-- Avatar-style Profile button in drawer -->
-                <a class="btn btn--ghost btn--block" routerLink="/profile" (click)="closeMobile()">
+                <div class="drawer__user" routerLink="/profile" (click)="closeMobile()">
                     @if (avatarUrl()) {
                     <img class="drawer-avatar" [src]="avatarUrl()" alt="Avatar" />
                     } @else {
-                    <span class="drawer-avatar__fallback" aria-hidden="true">{{ initial() }}</span>
+                    <div class="drawer-avatar__fallback">{{ initial() }}</div>
                     }
-                    <span class="drawer-avatar__name">{{ displayName() ?? 'Profile' }}</span>
-                </a>
+                    <div class="drawer-user-info">
+                        <span class="drawer-name">{{ displayName() || 'Profile' }}</span>
+                        <span class="drawer-role">Member</span>
+                    </div>
+                </div>
 
-                <button class="btn btn--solid btn--block" type="button" (click)="logout()">Logout</button>
+                <div class="drawer__actions">
+                    <a class="btn btn--create btn--block" routerLink="/posts/new" (click)="closeMobile()">+ New Post</a>
+                    <button class="btn btn--ghost btn--block" (click)="logout()">Logout</button>
+                </div>
                 }
             </div>
         </aside>
@@ -88,6 +100,8 @@
 </header>
 
 <main class="main">
+    <div class="grid-overlay"></div>
+
     <div class="sonic-container">
         <router-outlet />
     </div>

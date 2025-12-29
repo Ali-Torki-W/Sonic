@@ -3,28 +3,31 @@
         <h1>Explore</h1>
 
         <div class="feed__filters">
-            <input type="text" placeholder="Search posts (title/body)..." [value]="q()"
-                (input)="q.set(($any($event.target)).value)" (keydown.enter)="onSearchEnter()" />
+            <input type="text" placeholder="Search posts..." [ngModel]="q()" (ngModelChange)="q.set($event)"
+                (keydown.enter)="onSearchEnter()" />
 
-            <button type="button" (click)="toggleFeatured()">
-                @if (featuredOnly()) { Featured: ON } @else { Featured: OFF }
-            </button>
+            <div class="feed__filter-buttons">
+                <button type="button" [class.active]="featuredOnly()" (click)="toggleFeatured()">
+                    @if (featuredOnly()) { Featured: ON } @else { Featured: OFF }
+                </button>
 
-            <button type="button" (click)="clearFilters()">Clear</button>
+                <button type="button" (click)="clearFilters()">Clear</button>
+            </div>
         </div>
 
         <div class="feed__types">
-            <button type="button" (click)="setType(null)">All</button>
+            <button type="button" [class.active]="selectedType() === null" (click)="setType(null)">All</button>
+
             @for (t of typeOptions; track t) {
-            <button type="button" (click)="setType(t)">
+            <button type="button" [class.active]="selectedType() === t" (click)="setType(t)">
                 {{ t }}
             </button>
             }
         </div>
 
         <div class="feed__tags">
-            <input type="text" placeholder="Add tag (one-by-one)" [value]="tagDraft()"
-                (input)="tagDraft.set(($any($event.target)).value)" (keydown.enter)="addTagFromDraft()" />
+            <input type="text" placeholder="Add tag" [ngModel]="tagDraft()" (ngModelChange)="tagDraft.set($event)"
+                (keydown.enter)="addTagFromDraft()" />
             <button type="button" (click)="addTagFromDraft()">Add</button>
 
             @if (selectedTags().length > 0) {
@@ -40,17 +43,16 @@
     @if (error()) {
     <div class="feed__error">
         <p><strong>Error:</strong> {{ error() }}</p>
-        @if (errorCode()) {
-        <p><small>code: {{ errorCode() }}</small></p>
-        }
     </div>
     }
 
     @if (loading() && items().length === 0) {
     <p>Loading...</p>
-    } @else if (items().length === 0) {
+    }
+    @else if (items().length === 0) {
     <p>No posts found.</p>
-    } @else {
+    }
+    @else {
     <div class="feed__list">
         @for (p of items(); track p.id) {
         <article class="post">
@@ -61,7 +63,7 @@
             <p class="post__meta">
                 <span>{{ p.type }}</span>
                 <span> · </span>
-                <span>by {{ authorName(p.authorId) }}</span>
+                <span class="author-name">{{ getAuthorName(p.authorId) }}</span>
                 <span> · </span>
                 <span>{{ p.createdAt | date:'medium' }}</span>
             </p>
@@ -77,10 +79,10 @@
             }
 
             <p class="post__stats">
-                <span>Likes: {{ p.likeCount }}</span>
+                <span>♥ {{ p.likeCount }}</span>
                 @if (p.type === 'Campaign') {
                 <span> · </span>
-                <span>Participants: {{ p.participantsCount }}</span>
+                <span>👤 {{ p.participantsCount }}</span>
                 }
             </p>
         </article>
@@ -88,7 +90,7 @@
     </div>
 
     @if (canLoadMore()) {
-    <button type="button" (click)="loadMore()" [disabled]="loading()">
+    <button type="button" class="load-more" (click)="loadMore()" [disabled]="loading()">
         @if (loading()) { Loading... } @else { Load more }
     </button>
     }
