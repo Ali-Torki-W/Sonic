@@ -56,11 +56,11 @@ export class AppShell implements AfterViewInit, OnDestroy {
   readonly navLinks: NavLink[] = [
     { label: 'Explore', path: '/feed', exact: true },
     { label: 'Campaigns', path: '/campaigns' },
-    { label: 'Experiences', path: '/experiences' },
-    { label: 'Ideas', path: '/ideas' },
-    { label: 'Models', path: '/models' },
-    { label: 'Courses', path: '/courses' },
-    { label: 'News', path: '/news' },
+    // { label: 'Experiences', path: '/experiences' },
+    // { label: 'Ideas', path: '/ideas' },
+    // { label: 'Models', path: '/models' },
+    // { label: 'Courses', path: '/courses' },
+    // { label: 'News', path: '/news' },
   ];
 
   // Animation State
