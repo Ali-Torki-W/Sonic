@@ -248,6 +248,29 @@
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     }
 
+    .post__delete-btn {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        z-index: 10;
+        background: rgba(10, 15, 29, 0.8);
+        border: 1px solid rgba(239, 68, 68, 0.4);
+        color: #ef4444;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.8);
+        }
+    }
+
     h3 {
         margin: 0 0 12px 0;
         font-family: var(--font-head);

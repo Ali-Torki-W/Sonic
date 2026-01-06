@@ -25,6 +25,11 @@ export class PostsService {
         return this.api.put<PostResponse>(`/posts/${encodeURIComponent(id)}`, request);
     }
 
+    delete(postId: string): Observable<void> {
+        const id = (postId ?? '').trim();
+        return this.api.delete<void>(`/posts/${encodeURIComponent(id)}`);
+    }
+
     toggleLike(postId: string): Observable<LikeToggleResponse> {
         const id = (postId ?? '').trim();
         return this.api.post<LikeToggleResponse>(`/posts/${encodeURIComponent(id)}/like`, {});

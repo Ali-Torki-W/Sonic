@@ -10,6 +10,9 @@ import { PostType } from '../../../../shared/contracts/post/post-type';
 import { FeedQuery, FeedService } from '../../services/feed-service';
 import { AuthorDisplayNameCache } from '../../../../core/users/author-display-name-cache';
 import { ProblemDetails } from '../../../../core/http/problem-details';
+import { UsersService } from '../../../../core/users/user-service';
+import { PostsService } from '../../../../core/posts/post.service';
+import { AuthStateService } from '../../../../core/auth/auth-state.service';
 
 @Component({
   selector: 'sonic-feed-page',
@@ -21,9 +24,12 @@ import { ProblemDetails } from '../../../../core/http/problem-details';
 export class FeedPage {
   private readonly feedService = inject(FeedService);
   private readonly authorCache = inject(AuthorDisplayNameCache);
-
-  // ✅ FIX 1: Inject DestroyRef explicitly
   private readonly destroyRef = inject(DestroyRef);
+
+  // NEW: Inject services for deleting and permissions
+  private readonly postsService = inject(PostsService);
+  private readonly usersService = inject(UsersService);
+  private readonly authState = inject(AuthStateService);
 
   // --- UI State ---
   readonly loading = signal(false);
@@ -44,6 +50,10 @@ export class FeedPage {
   readonly selectedTags = signal<readonly string[]>([]);
   readonly tagDraft = signal('');
 
+  // --- User Permissions State ---
+  readonly meId = signal<string | null>(null);
+  readonly meRole = signal<string | null>(null);
+
   // --- Computed Helpers ---
   readonly typeOptions = Object.values(PostType);
 
@@ -52,9 +62,13 @@ export class FeedPage {
   });
 
   constructor() {
+    // 1. Load User Info for Permissions
+    this.loadUser();
+
+    // 2. Load Feed
     this.refresh();
 
-    // Reactive Effect: Resolve Author Names
+    // 3. Reactive Effect: Resolve Author Names
     effect(() => {
       const posts = this.items();
       const currentCache = untracked(this.authorNames);
@@ -63,7 +77,6 @@ export class FeedPage {
         if (!p.authorId || currentCache[p.authorId]) return;
 
         this.authorCache.getDisplayName(p.authorId)
-          // ✅ FIX 2: Pass destroyRef explicitly inside effect
           .pipe(takeUntilDestroyed(this.destroyRef))
           .subscribe(name => {
             if (name) {
@@ -72,6 +85,18 @@ export class FeedPage {
           });
       });
     });
+  }
+
+  // --- Auth/User Logic ---
+  private loadUser() {
+    if (this.authState.isAuthenticated()) {
+      this.usersService.getMe()
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(me => {
+          this.meId.set(me.id);
+          this.meRole.set(me.role);
+        });
+    }
   }
 
   // --- Actions ---
@@ -85,6 +110,28 @@ export class FeedPage {
     if (this.loading()) return;
     this.page.update(p => p + 1);
     this.executeFetch({ append: true });
+  }
+
+  // NEW: Delete Functionality
+  deletePost(event: Event, post: PostResponse): void {
+    // Stop the click from propagating to the RouterLink on the card
+    event.stopPropagation();
+    event.preventDefault();
+
+    if (!confirm('Are you sure you want to delete this post?')) return;
+
+    this.postsService.delete(post.id)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          // Optimistic UI Update: Remove from list immediately
+          this.items.update(currentItems => currentItems.filter(p => p.id !== post.id));
+          this.totalItems.update(c => Math.max(0, c - 1));
+        },
+        error: (err) => {
+          alert("Failed to delete post.");
+        }
+      });
   }
 
   // --- Filter Logic ---
@@ -146,7 +193,6 @@ export class FeedPage {
 
     this.feedService.getFeed(query)
       .pipe(
-        // ✅ FIX 3: Pass destroyRef explicitly here too (fixes button click crash)
         takeUntilDestroyed(this.destroyRef),
         finalize(() => this.loading.set(false))
       )

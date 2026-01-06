@@ -56,6 +56,13 @@
     <div class="feed__list">
         @for (p of items(); track p.id) {
         <article class="post">
+
+            @if (p.authorId === meId() || meRole() === 'Admin') {
+            <button type="button" class="post__delete-btn" (click)="deletePost($event, p)" title="Delete Post">
+                ✕
+            </button>
+            }
+
             <h3>
                 <a [routerLink]="['/posts', p.id]">{{ p.title }}</a>
             </h3>

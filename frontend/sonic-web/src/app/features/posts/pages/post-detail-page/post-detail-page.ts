@@ -226,6 +226,27 @@ export class PostDetailPage {
       });
   }
 
+  // --- New Delete Method ---
+  deletePost(): void {
+    if (!confirm('Are you sure you want to delete this transmission permanently?')) return;
+
+    // We reuse the loading state or could add a specific deleting state
+    this.postLoading.set(true);
+
+    this.posts.delete(this.postId())
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          // Navigate back to feed on success
+          this.router.navigate(['/feed']);
+        },
+        error: (err) => {
+          this.postLoading.set(false);
+          this.handleError(err, this.postError);
+        }
+      });
+  }
+
   // --- Comments ---
 
   refreshComments(): void {
