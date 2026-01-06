@@ -61,6 +61,7 @@ public class PostController(IPostService postService) : ApiControllerBase
         var response = new PostResponse
         {
             Id = post.Id,
+            Type = post.Type,
             Title = post.Title,
             Body = post.Body,
             Tags = post.Tags.ToList(),
@@ -91,6 +92,7 @@ public class PostController(IPostService postService) : ApiControllerBase
         var response = new PostResponse
         {
             Id = post.Id,
+            Type = post.Type,
             Title = post.Title,
             Body = post.Body,
             Tags = post.Tags.ToList(),
@@ -130,6 +132,7 @@ public class PostController(IPostService postService) : ApiControllerBase
         var response = new PostResponse
         {
             Id = post.Id,
+            Type = post.Type,
             Title = post.Title,
             Body = post.Body,
             Tags = post.Tags.ToList(),

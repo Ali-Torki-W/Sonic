@@ -23,7 +23,7 @@ public sealed class PostResponse
 
     public bool IsFeatured { get; set; }
 
-    public long LikeCount { get; set; }
+    public long? LikeCount { get; set; }
 
     public string? CampaignGoal { get; set; }
 
