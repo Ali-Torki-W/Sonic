@@ -6,30 +6,22 @@
     overflow-x: hidden;
     color: var(--sonic-text-main);
     font-family: var(--font-body);
-
-    // Deep, rich base color (not just black)
     background-color: #030508;
 }
 
 // --- 2. Environmental Textures (The "Vibe" Fix) ---
-
-// A. The Tech Grid (Subtle structure)
 .grid-overlay {
     position: fixed;
     inset: 0;
     z-index: 0;
     pointer-events: none;
-    // Creates a 40px grid pattern
     background-size: 40px 40px;
     background-image:
         linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
         linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-
-    // Mask it so it fades out at the edges (Vignette effect)
     mask-image: radial-gradient(circle at 50% 50%, black 40%, transparent 100%);
 }
 
-// B. Ambient Light (Richness)
 :host::before {
     content: '';
     position: fixed;
@@ -40,15 +32,12 @@
     z-index: 0;
     pointer-events: none;
     background:
-        // Top-Center Blue Glow (matches Topbar)
         radial-gradient(circle at 50% -10%, rgba(0, 224, 255, 0.08), transparent 50%),
-        // Bottom-Left Purple Haze
         radial-gradient(circle at 0% 100%, rgba(168, 85, 247, 0.05), transparent 40%),
-        // Bottom-Right Teal Haze
         radial-gradient(circle at 100% 100%, rgba(45, 212, 191, 0.05), transparent 40%);
 }
 
-// C. Cosmic Elements (Floating Orbs)
+// --- 3. Cosmic Elements ---
 .cosmic-element {
     position: fixed;
     border-radius: 50%;
@@ -90,7 +79,7 @@
     }
 }
 
-// --- 3. The Stars (Subtle twinkling) ---
+// --- 4. The Stars ---
 .stars {
     position: fixed;
     inset: 0;
@@ -98,17 +87,17 @@
     pointer-events: none;
 }
 
-// --- 4. The Topbar (The Cockpit) ---
+// --- 5. The Topbar (Fixed positioning) ---
 .topbar {
-    position: sticky;
+    position: fixed;
     top: 0;
+    left: 0;
+    right: 0;
     z-index: 1000;
     height: var(--topbar-h);
-    // Dark glass, high opacity for readability
-    background: rgba(5, 8, 12, 0.85);
+    background: rgba(5, 8, 12, 0.95);
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
-    // The border is now a subtle gradient, not a solid line
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
 }
@@ -118,13 +107,17 @@
     align-items: center;
     gap: 24px;
     height: 100%;
+    width: 100%;
+    max-width: var(--sonic-maxw);
+    margin: 0 auto;
+    padding: 0 24px;
 }
 
 .spacer {
     flex: 1;
 }
 
-// --- 5. Brand Identity ---
+// --- 6. Brand ---
 .brand {
     font-family: var(--font-head);
     font-size: 22px;
@@ -136,8 +129,8 @@
     display: flex;
     align-items: center;
     gap: 12px;
+    cursor: pointer;
 
-    // Status Indicator
     &::after {
         content: '';
         width: 6px;
@@ -161,18 +154,16 @@
     }
 }
 
-// --- 6. Desktop Navigation (Spotlight) ---
+// --- 7. Desktop Navigation ---
 .nav.desktop {
     display: flex;
     gap: 4px;
     padding: 4px;
-    // Container is barely visible, lets buttons pop
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid rgba(255, 255, 255, 0.06);
     border-radius: var(--sonic-radius-pill);
     position: relative;
     overflow: hidden;
-
     --mouse-x: -100px;
     --mouse-y: -100px;
 }
@@ -217,7 +208,7 @@
     }
 }
 
-// --- 7. Auth & Actions ---
+// --- 8. Auth & Actions ---
 .auth.desktop {
     display: flex;
     align-items: center;
@@ -272,7 +263,6 @@
     }
 }
 
-// Reusable Icon Button (Logout/Mobile Menu)
 .icon-btn {
     width: 42px;
     height: 42px;
@@ -294,7 +284,7 @@
     }
 }
 
-// --- 8. Buttons (Universal) ---
+// --- 9. Buttons ---
 .btn {
     height: 42px;
     padding: 0 20px;
@@ -336,7 +326,7 @@
     }
 
     &--create {
-        background: rgba(168, 85, 247, 0.1); // Purple tint
+        background: rgba(168, 85, 247, 0.1);
         color: var(--sonic-secondary);
         border: 1px solid rgba(168, 85, 247, 0.4);
         padding-left: 16px;
@@ -355,56 +345,124 @@
             box-shadow: 0 0 20px rgba(168, 85, 247, 0.2);
         }
     }
+
+    &--block {
+        width: 100%;
+    }
 }
 
-// --- 9. Mobile Drawer (Fixed & Solid) ---
+// ============================================
+// FIXED BURGER MENU - PROPER POSITIONING
+// ============================================
+
+// --- 10. Burger Menu Button (ALWAYS VISIBLE) ---
 .burger {
     display: none;
     flex-direction: column;
     justify-content: center;
-    gap: 5px;
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.15);
+    align-items: center;
+    gap: 6px;
+    background: linear-gradient(135deg, #0a0f19 0%, #121828 100%);
+    border: 2px solid rgba(0, 224, 255, 0.5);
     padding: 0;
     cursor: pointer;
-    width: 44px;
-    height: 44px;
-    border-radius: 12px;
-    transition: all 0.2s;
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow:
+        0 6px 20px rgba(0, 0, 0, 0.6),
+        0 0 0 1px rgba(0, 224, 255, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    position: relative;
+    z-index: 1001;
 
     &-line {
-        width: 20px;
-        height: 2px;
-        background: #fff;
-        border-radius: 4px;
-        transition: 0.3s;
-        margin: 0 auto;
+        width: 22px;
+        height: 3px;
+        background: linear-gradient(90deg,
+                rgba(255, 255, 255, 0.9) 0%,
+                #ffffff 50%,
+                rgba(255, 255, 255, 0.9) 100%);
+        border-radius: 3px;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        margin: 0;
+        box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
     }
 
     &:hover {
+        background: linear-gradient(135deg, #0d1324 0%, #1a2342 100%);
         border-color: var(--sonic-primary);
-        background: rgba(0, 224, 255, 0.1);
+        transform: translateY(-2px);
+        box-shadow:
+            0 10px 30px rgba(0, 224, 255, 0.3),
+            0 0 0 2px rgba(0, 224, 255, 0.4),
+            inset 0 1px 0 rgba(255, 255, 255, 0.15);
+
+        .burger-line {
+            background: linear-gradient(90deg,
+                    var(--sonic-primary) 0%,
+                    #ffffff 50%,
+                    var(--sonic-primary) 100%);
+            box-shadow: 0 0 15px var(--sonic-primary);
+        }
     }
 
-    &:hover &-line {
-        background: var(--sonic-primary);
-        box-shadow: 0 0 8px var(--sonic-primary);
+    &:active {
+        transform: translateY(-1px);
     }
 }
 
+// Burger animation when drawer is open
+.drawer--open .burger {
+    border-color: var(--sonic-primary);
+    background: linear-gradient(135deg, #0d1324 0%, #0a0f19 100%);
+
+    .burger-line:first-child {
+        transform: translateY(4px) rotate(45deg);
+        width: 26px;
+        background: linear-gradient(90deg,
+                var(--sonic-primary) 0%,
+                #ffffff 50%,
+                var(--sonic-primary) 100%);
+    }
+
+    .burger-line:last-child {
+        transform: translateY(-4px) rotate(-45deg);
+        width: 26px;
+        background: linear-gradient(90deg,
+                var(--sonic-primary) 0%,
+                #ffffff 50%,
+                var(--sonic-primary) 100%);
+    }
+}
+
+// --- 11. Mobile Drawer (FIXED POSITION - FULL SCREEN) ---
 .drawer {
     position: fixed;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     z-index: 2000;
     pointer-events: none;
+    display: block;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
 
     &__backdrop {
         position: absolute;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.85);
-        backdrop-filter: blur(4px);
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.95);
+        backdrop-filter: blur(15px) saturate(180%);
+        -webkit-backdrop-filter: blur(15px) saturate(180%);
         opacity: 0;
-        transition: opacity 0.4s ease;
+        transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 1;
     }
 
     &__panel {
@@ -412,15 +470,37 @@
         top: 0;
         left: 0;
         bottom: 0;
-        width: 300px;
-        background: #080b14; // Solid dark
-        border-right: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 20px 0 60px rgba(0, 0, 0, 0.8);
+        width: 360px;
+        max-width: 85vw;
+        background: linear-gradient(160deg, #0a0f19 0%, #0c111d 30%, #0e1322 100%);
+        border-right: 2px solid rgba(0, 224, 255, 0.15);
+        box-shadow:
+            30px 0 80px rgba(0, 0, 0, 0.9),
+            0 0 0 1px rgba(0, 224, 255, 0.1) inset;
         transform: translateX(-100%);
-        transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+        transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
         display: flex;
         flex-direction: column;
-        padding: 24px;
+        padding: 32px 24px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        z-index: 2;
+
+        &::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: -1px;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(to bottom,
+                    transparent,
+                    rgba(0, 224, 255, 0.4),
+                    rgba(0, 224, 255, 0.6),
+                    rgba(0, 224, 255, 0.4),
+                    transparent);
+            z-index: 1;
+        }
     }
 
     &--open {
@@ -441,59 +521,168 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 40px;
-    padding-bottom: 20px;
+    padding-bottom: 24px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    flex-shrink: 0;
+
+    &::before {
+        content: '';
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        width: 100px;
+        height: 2px;
+        background: linear-gradient(90deg, var(--sonic-primary), transparent);
+        border-radius: 2px;
+    }
+
+    .brand {
+        font-size: 26px;
+
+        &::after {
+            width: 8px;
+            height: 8px;
+        }
+    }
+
+    .icon-btn {
+        width: 44px;
+        height: 44px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        font-size: 22px;
+        color: var(--sonic-text-main);
+
+        &:hover {
+            background: rgba(0, 224, 255, 0.1);
+            border-color: var(--sonic-primary);
+            color: var(--sonic-primary);
+            transform: rotate(90deg);
+        }
+    }
 }
 
 .drawer__nav {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 12px;
     flex: 1;
+    margin-bottom: 20px;
 }
 
 .drawer__link {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    padding: 16px 20px;
-    border-radius: 12px;
+    padding: 18px 24px;
+    border-radius: 14px;
     color: var(--sonic-text-muted);
     text-decoration: none;
-    font-size: 16px;
-    font-weight: 500;
-    transition: 0.2s;
+    font-size: 17px;
+    font-weight: 600;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    position: relative;
 
     opacity: 0;
-    transform: translateX(-30px);
-    transition: opacity 0.4s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1), background 0.2s;
+    transform: translateX(-40px);
 
-    &:hover,
-    &.active {
-        background: rgba(255, 255, 255, 0.05);
+    span {
+        position: relative;
+        z-index: 1;
+    }
+
+    &::after {
+        content: '';
+        position: absolute;
+        right: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 6px;
+        height: 6px;
+        background: var(--sonic-primary);
+        border-radius: 50%;
+        opacity: 0;
+        transition: opacity 0.3s;
+        box-shadow: 0 0 10px var(--sonic-primary);
+    }
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.08);
         color: #fff;
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.15);
+        transform: translateX(10px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+
+        &::after {
+            opacity: 1;
+        }
     }
 
     &.active {
-        background: var(--sonic-primary-dim);
-        border-color: var(--sonic-primary);
+        background: linear-gradient(90deg,
+                rgba(0, 224, 255, 0.15) 0%,
+                rgba(0, 224, 255, 0.05) 100%);
+        border-color: rgba(0, 224, 255, 0.3);
         color: var(--sonic-primary);
+        transform: translateX(10px);
+        box-shadow:
+            0 10px 20px rgba(0, 224, 255, 0.15),
+            0 0 30px rgba(0, 224, 255, 0.1);
+
+        &::after {
+            opacity: 1;
+            animation: pulse 2s infinite;
+        }
+
+        span {
+            text-shadow: 0 0 20px rgba(0, 224, 255, 0.5);
+        }
+    }
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        box-shadow: 0 0 10px var(--sonic-primary);
+    }
+
+    50% {
+        box-shadow: 0 0 20px var(--sonic-primary);
     }
 }
 
 .drawer--open .drawer__link {
     opacity: 1;
     transform: translateX(0);
-    transition-delay: calc(0.1s + (var(--i) * 0.06s));
+    transition:
+        opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+        transform 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+        background 0.3s,
+        border-color 0.3s;
+    transition-delay: calc(0.1s + (var(--i) * 0.08s));
 }
 
 .drawer__footer {
     border-top: 1px solid rgba(255, 255, 255, 0.1);
-    padding-top: 24px;
+    padding-top: 28px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 20px;
+    flex-shrink: 0;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: -1px;
+        left: 0;
+        width: 100px;
+        height: 2px;
+        background: linear-gradient(90deg, var(--sonic-secondary), transparent);
+        border-radius: 2px;
+    }
 }
 
 .drawer__user {
@@ -501,10 +690,47 @@
     align-items: center;
     gap: 16px;
     text-decoration: none;
-    padding: 16px;
-    background: rgba(255, 255, 255, 0.03);
+    padding: 20px;
+    background: linear-gradient(135deg,
+            rgba(255, 255, 255, 0.05) 0%,
+            rgba(255, 255, 255, 0.02) 100%);
     border-radius: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    transition: all 0.3s;
+    cursor: pointer;
+
+    &:hover {
+        background: linear-gradient(135deg,
+                rgba(255, 255, 255, 0.08) 0%,
+                rgba(255, 255, 255, 0.04) 100%);
+        border-color: rgba(255, 255, 255, 0.15);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    }
+}
+
+.drawer-avatar {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(0, 224, 255, 0.3);
+    box-shadow: 0 0 20px rgba(0, 224, 255, 0.2);
+}
+
+.drawer-avatar__fallback {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--sonic-secondary), var(--sonic-primary));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 16px;
+    color: #000;
+    border: 2px solid rgba(0, 224, 255, 0.3);
+    box-shadow: 0 0 20px rgba(0, 224, 255, 0.2);
 }
 
 .drawer-user-info {
@@ -513,25 +739,32 @@
 
     .drawer-name {
         color: #fff;
-        font-weight: 700;
-        font-size: 15px;
+        font-weight: 800;
+        font-size: 17px;
+        margin-bottom: 4px;
     }
 
     .drawer-role {
         color: var(--sonic-text-muted);
         font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
     }
 }
 
-// --- 10. The Main Container (The Frame) ---
+.drawer__actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+// --- 12. The Main Container ---
 .main {
     position: relative;
     z-index: 1;
-    // Give content breathing room
-    padding-top: 40px;
+    padding-top: calc(var(--topbar-h) + 40px);
     padding-bottom: 80px;
 
-    // Add the "Container" definition here to ensure it aligns
     .sonic-container {
         width: 100%;
         max-width: var(--sonic-maxw);
@@ -541,7 +774,7 @@
     }
 }
 
-// --- 11. Responsive Rules ---
+// --- 13. Responsive Rules ---
 @media (max-width: 1024px) {
 
     .nav.desktop,
@@ -551,6 +784,24 @@
 
     .burger {
         display: flex;
+    }
+
+    @media (max-width: 480px) {
+        .burger {
+            width: 44px;
+            height: 44px;
+        }
+
+        .drawer__panel {
+            width: 320px;
+            max-width: 90vw;
+            padding: 24px 20px;
+        }
+
+        .drawer__link {
+            padding: 16px 20px;
+            font-size: 16px;
+        }
     }
 }
 

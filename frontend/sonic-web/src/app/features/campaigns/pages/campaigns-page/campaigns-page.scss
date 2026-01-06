@@ -31,21 +31,31 @@
         display: flex;
         align-items: center;
         gap: 12px;
+        line-height: 1.2;
+        word-break: break-word;
+        overflow-wrap: break-word;
 
         &::before {
             content: '';
             width: 6px;
             height: 6px;
-            background: #10b981; // Green for "Active"
+            background: #10b981;
             box-shadow: 0 0 10px #10b981;
             border-radius: 50%;
             animation: pulse 2s infinite;
+            flex-shrink: 0;
+        }
+
+        span {
+            display: inline-block;
+            max-width: 100%;
         }
     }
 
     .muted {
         color: var(--sonic-text-muted);
         font-size: 16px;
+        line-height: 1.4;
     }
 }
 
@@ -76,7 +86,7 @@
 
     .input-search {
         width: 100%;
-        height: 64px; // Big & Tactile
+        height: 64px;
         padding: 0 24px;
         background: rgba(10, 15, 25, 0.6);
         border: 2px solid rgba(255, 255, 255, 0.15);
@@ -107,8 +117,6 @@
     .btn {
         height: 64px;
     }
-
-    // Match search height
 }
 
 // --- 4. Tag Input ---
@@ -182,7 +190,7 @@
 
 // --- 6. The Mission Card ---
 .mission-card {
-    background: #0a0f1d; // Solid Dark
+    background: #0a0f1d;
     border: 1px solid var(--sonic-border);
     border-radius: 20px;
     padding: 24px;
@@ -192,7 +200,6 @@
     overflow: hidden;
     transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 
-    // Top Accent (Green/Teal for Campaigns)
     &::before {
         content: '';
         position: absolute;
@@ -232,7 +239,6 @@
                 z-index: 1;
             }
 
-            // Link overlay
             &:hover {
                 color: #10b981;
             }
@@ -250,7 +256,7 @@
 }
 
 .mission-objective {
-    background: rgba(16, 185, 129, 0.05); // Green tint
+    background: rgba(16, 185, 129, 0.05);
     border: 1px dashed rgba(16, 185, 129, 0.2);
     padding: 16px;
     border-radius: 12px;
@@ -330,7 +336,7 @@
     }
 
     &--solid {
-        background: #10b981; // Green for Action
+        background: #10b981;
         color: #000;
 
         &:hover {
@@ -415,26 +421,109 @@
 
 // --- 9. Mobile ---
 @media (max-width: 768px) {
+    .cp {
+        padding: 24px 0 60px;
+    }
+
+    .cp__wrap {
+        padding: 0 16px;
+    }
+
+    .cp__header {
+        margin-bottom: 32px;
+
+        h1 {
+            font-size: 24px;
+            letter-spacing: 1px;
+            gap: 10px;
+            flex-wrap: wrap;
+
+            &::before {
+                width: 5px;
+                height: 5px;
+            }
+        }
+
+        .muted {
+            font-size: 14px;
+        }
+    }
+
     .cp__filters {
         flex-direction: column;
+    }
+
+    .search-group {
+        width: 100%;
+
+        .input-search {
+            height: 56px;
+            font-size: 16px;
+            padding: 0 20px;
+        }
     }
 
     .filter-actions {
         width: 100%;
 
         .btn {
+            height: 56px;
             flex: 1;
+            padding: 0 16px;
+            font-size: 12px;
         }
     }
 
     .cp__tags-input {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+
         .input-tag {
-            flex: 1;
-            width: auto;
+            width: 100%;
+            height: 44px;
         }
+    }
+
+    .active-tags {
+        margin-bottom: 32px;
     }
 
     .cp__grid {
         grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .mission-card {
+        padding: 20px;
+    }
+
+    .mission-head .mission-title {
+        font-size: 18px;
+    }
+
+    .mission-objective .value {
+        font-size: 14px;
+    }
+
+    .btn--wide {
+        min-width: auto;
+        width: 100%;
+    }
+}
+
+// Additional small screen fixes
+@media (max-width: 480px) {
+    .cp__header h1 {
+        font-size: 22px;
+        gap: 8px;
+    }
+
+    .mission-card {
+        padding: 16px;
+    }
+
+    .btn {
+        padding: 0 20px;
     }
 }

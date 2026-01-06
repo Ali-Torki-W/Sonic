@@ -1,10 +1,12 @@
+<!-- Keep the original structure but fix the visibility -->
 <header class="topbar">
     <div class="stars"></div>
     <div class="cosmic-element cosmic-element--1"></div>
     <div class="cosmic-element cosmic-element--2"></div>
 
     <div class="sonic-container topbar__row">
-        <button class="burger" type="button" (click)="toggleMobile()" aria-label="Open menu">
+        <button class="burger" type="button" (click)="toggleMobile()" aria-label="Open menu"
+            [attr.aria-expanded]="mobileOpen()">
             <span class="burger-line"></span>
             <span class="burger-line"></span>
         </button>
@@ -54,12 +56,13 @@
         </div>
     </div>
 
+    <!-- Drawer should stay inside for data binding -->
     <div class="drawer" [class.drawer--open]="mobileOpen()">
         <div class="drawer__backdrop" (click)="closeMobile()"></div>
 
         <aside class="drawer__panel" role="dialog" aria-modal="true" aria-label="Navigation">
             <div class="drawer__header">
-                <a class="brand" (click)="closeMobile()">Sonic</a>
+                <a class="brand" routerLink="/" (click)="closeMobile()">Sonic</a>
                 <button class="icon-btn" type="button" (click)="closeMobile()" aria-label="Close menu">✕</button>
             </div>
 
@@ -67,15 +70,18 @@
                 @for (link of navLinks; track link.label; let i = $index) {
                 <a class="drawer__link" [routerLink]="link.path" routerLinkActive="active"
                     [routerLinkActiveOptions]="{ exact: !!link.exact }" (click)="closeMobile()" [style.--i]="i">
-                    {{ link.label }}
+                    <span>{{ link.label }}</span>
                 </a>
                 }
             </nav>
 
             <div class="drawer__footer">
                 @if (!isAuthenticated()) {
-                <a class="btn btn--ghost btn--block" routerLink="/account/login" (click)="closeMobile()">Log In</a>
-                <a class="btn btn--solid btn--block" routerLink="/account/register" (click)="closeMobile()">Sign Up</a>
+                <div class="drawer__actions">
+                    <a class="btn btn--ghost btn--block" routerLink="/account/login" (click)="closeMobile()">Log In</a>
+                    <a class="btn btn--solid btn--block" routerLink="/account/register" (click)="closeMobile()">Sign
+                        Up</a>
+                </div>
                 } @else {
                 <div class="drawer__user" routerLink="/profile" (click)="closeMobile()">
                     @if (avatarUrl()) {
@@ -91,7 +97,7 @@
 
                 <div class="drawer__actions">
                     <a class="btn btn--create btn--block" routerLink="/posts/new" (click)="closeMobile()">+ New Post</a>
-                    <button class="btn btn--ghost btn--block" (click)="logout()">Logout</button>
+                    <button class="btn btn--ghost btn--block" (click)="logout(); closeMobile()">Logout</button>
                 </div>
                 }
             </div>

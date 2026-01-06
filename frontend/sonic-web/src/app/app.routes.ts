@@ -15,10 +15,9 @@ import { guestGuard } from './core/guards/guest.guard';
 
 export const routes: Routes = [
     // Public - Home
-    // Added pathMatch: 'full' to prevent prefix matching issues
-    { path: '', component: FeedPage, pathMatch: 'full', title: 'Sonic - Feed' },
-    { path: 'feed', component: FeedPage, title: 'Sonic - Feed' },
-    { path: 'campaigns', component: CampaignsPage, title: 'Sonic - Campaigns' },
+    { path: '', component: FeedPage, pathMatch: 'full', title: 'Explore' },
+    { path: 'feed', component: FeedPage, title: 'Explore' },
+    { path: 'campaigns', component: CampaignsPage, title: 'Campaigns' },
 
     // 🔒 Auth Required Group
     // Any child route here runs the authGuard + Snack check
@@ -35,7 +34,7 @@ export const routes: Routes = [
 
     // Public Post Detail 
     // MUST remain below the Auth Group so 'posts/new' is matched first
-    { path: 'posts/:id', component: PostDetailPage, title: 'Sonic - Post' },
+    { path: 'posts/:id', component: PostDetailPage, title: 'Post' },
 
     // 🚫 Guest Group (Login/Register)
     // Logged-in users are kicked out to /feed
