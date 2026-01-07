@@ -1,0 +1,338 @@
+:host {
+    display: block;
+}
+
+// --- 1. Layout & Wrapper ---
+.pp {
+    min-height: 100vh;
+    padding: 40px 0 80px;
+    position: relative;
+    z-index: 1;
+}
+
+.pp__wrap {
+    max-width: 600px; // Slightly narrower than edit mode for a focused "Card" look
+    margin: 0 auto;
+    padding: 0 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+// --- 2. Top Navigation ---
+.pp__topbar {
+    display: flex;
+    align-items: center;
+}
+
+.pp__back {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--sonic-text-muted);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    padding: 8px 16px 8px 0;
+    cursor: pointer;
+
+    .icon {
+        font-size: 18px;
+        transition: transform 0.2s ease;
+    }
+
+    &:hover {
+        color: var(--sonic-primary);
+
+        .icon {
+            transform: translateX(-4px);
+        }
+    }
+}
+
+// --- 3. The Main Dossier Card ---
+// Inherits the "Deep Dark" look from your private profile
+.pp__card {
+    background: #0a0f1d;
+    border: 1px solid var(--sonic-border);
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+    position: relative;
+    animation: fade-in-up 0.4s ease-out;
+
+    // Top Accent Gradient
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, var(--sonic-primary), transparent);
+        box-shadow: 0 0 15px var(--sonic-primary);
+    }
+}
+
+@keyframes fade-in-up {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+// --- 4. Dossier Header (Identity) ---
+.dossier__header {
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.02), transparent);
+    padding: 40px 24px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.identity-visual {
+    width: 120px;
+    height: 120px;
+    margin-bottom: 20px;
+    border-radius: 50%;
+    padding: 4px; // Gap for the border
+    border: 1px solid var(--sonic-primary);
+    box-shadow: 0 0 30px rgba(0, 224, 255, 0.15); // Glow effect
+    background: rgba(0, 0, 0, 0.3);
+    position: relative;
+
+    // Rotating scanner effect (Optional visual flair)
+    &::after {
+        content: '';
+        position: absolute;
+        inset: -4px;
+        border-radius: 50%;
+        border: 1px dashed rgba(0, 224, 255, 0.3);
+        animation: rotate-slow 20s linear infinite;
+    }
+
+    .avatar-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+        display: block;
+    }
+
+    .avatar-fallback {
+        width: 100%;
+        height: 100%;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--sonic-secondary), var(--sonic-primary));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-family: var(--font-head);
+        font-size: 48px;
+        font-weight: 700;
+        color: #000;
+    }
+}
+
+@keyframes rotate-slow {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.identity-data {
+    .name {
+        font-family: var(--font-head);
+        font-size: 32px;
+        font-weight: 800;
+        color: var(--sonic-text-main);
+        margin: 0 0 8px 0;
+        letter-spacing: 1px;
+        text-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+    }
+
+    .designation {
+        display: inline-block;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: var(--sonic-primary);
+        background: rgba(0, 224, 255, 0.08);
+        border: 1px solid rgba(0, 224, 255, 0.2);
+        padding: 6px 16px;
+        border-radius: 99px;
+        box-shadow: 0 0 10px rgba(0, 224, 255, 0.05);
+    }
+}
+
+// --- 5. Dossier Body (Content) ---
+.dossier__body {
+    padding: 32px 40px;
+}
+
+.section {
+    margin-bottom: 0; // Single section for now
+}
+
+.label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-head);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--sonic-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+
+    .icon {
+        color: var(--sonic-secondary);
+        font-size: 16px;
+    }
+}
+
+.text {
+    font-size: 16px;
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.85);
+    white-space: pre-wrap; // Respect paragraphs/newlines
+}
+
+.muted-text {
+    font-style: italic;
+    color: var(--sonic-text-muted);
+    font-size: 14px;
+
+    &.center {
+        text-align: center;
+        display: block;
+        padding: 20px 0;
+    }
+}
+
+// --- 6. Dossier Footer (Meta) ---
+.dossier__footer {
+    background: rgba(0, 0, 0, 0.2);
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 16px 40px;
+
+    .meta {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
+        font-family: monospace;
+        font-size: 12px;
+        color: var(--sonic-text-muted);
+        opacity: 0.6;
+    }
+
+    .value {
+        color: var(--sonic-text-main);
+    }
+}
+
+// --- 7. Loading & Error States ---
+// (Matched to Private Profile visuals)
+
+.pp__status {
+    background: rgba(10, 15, 29, 0.8);
+    border: 1px solid var(--sonic-border);
+    border-radius: 24px;
+    padding: 60px 20px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+
+    p {
+        color: var(--sonic-text-muted);
+        font-size: 15px;
+        letter-spacing: 0.5px;
+    }
+
+    // Loading Spinner
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid rgba(255, 255, 255, 0.1);
+        border-top-color: var(--sonic-primary);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    // Error Mode
+    &--error {
+        border-color: rgba(239, 68, 68, 0.4);
+        background: rgba(239, 68, 68, 0.05);
+
+        .icon {
+            font-size: 32px;
+            color: #ef4444;
+            margin-bottom: 8px;
+        }
+
+        h3 {
+            color: #ef4444;
+            font-family: var(--font-head);
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        p {
+            color: #fca5a5;
+        }
+    }
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+// --- 8. Mobile Responsiveness ---
+@media (max-width: 600px) {
+    .pp__wrap {
+        padding: 0 16px;
+    }
+
+    .dossier__header {
+        padding: 32px 20px 24px;
+    }
+
+    .identity-visual {
+        width: 100px;
+        height: 100px;
+
+        .avatar-fallback {
+            font-size: 40px;
+        }
+    }
+
+    .identity-data .name {
+        font-size: 26px;
+    }
+
+    .dossier__body {
+        padding: 24px;
+    }
+
+    .dossier__footer {
+        padding: 16px 24px;
+    }
+}

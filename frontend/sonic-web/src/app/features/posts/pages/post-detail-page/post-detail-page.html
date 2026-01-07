@@ -36,9 +36,13 @@
                 <h1 class="post-title">{{ p.title }}</h1>
 
                 <div class="author-row">
-                    <div class="author-avatar">{{ p.authorId.slice(0,1) }}</div>
+                    <a [routerLink]="['/users', p.authorId]" class="author-avatar clickable" title="View Dossier">
+                        {{ p.authorId.slice(0,1) }}
+                    </a>
                     <div class="author-info">
-                        <span class="name">{{ getAuthorName(p.authorId) }}</span>
+                        <a [routerLink]="['/users', p.authorId]" class="name clickable" title="View Dossier">
+                            {{ getAuthorName(p.authorId) }}
+                        </a>
                         <span class="role">Author</span>
                     </div>
                 </div>
@@ -149,10 +153,14 @@
             <div class="comments-feed">
                 @for (c of commentItems(); track c.id) {
                 <div class="comment-entry">
-                    <div class="avatar">{{ getAuthorName(c.authorId).slice(0, 1) }}</div>
+                    <a [routerLink]="['/users', c.authorId]" class="avatar clickable" title="View Dossier">
+                        {{ getAuthorName(c.authorId).slice(0, 1) }}
+                    </a>
                     <div class="content">
                         <div class="meta">
-                            <span class="name">{{ getAuthorName(c.authorId) }}</span>
+                            <a [routerLink]="['/users', c.authorId]" class="name clickable">
+                                {{ getAuthorName(c.authorId) }}
+                            </a>
                             <span class="time">{{ c.createdAt | date:'short' }}</span>
                         </div>
                         <div class="text">{{ c.body }}</div>

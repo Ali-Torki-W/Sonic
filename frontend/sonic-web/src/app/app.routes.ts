@@ -7,11 +7,13 @@ import { CampaignsPage } from './features/campaigns/pages/campaigns-page/campaig
 import { PostDetailPage } from './features/posts/pages/post-detail-page/post-detail-page';
 import { PostEditorPage } from './features/posts/pages/post-editor-page/post-editor-page';
 import { ProfilePage } from './features/profile/pages/profile-page/profile-page';
+// Import the new Public Profile Page
 import { ServerErrorPage } from './features/errors/pages/server-error-page/server-error-page';
 import { NotFoundPage } from './features/errors/pages/not-found-page/not-found-page';
 
 import { authGuard } from './core/guards/auth.guard';
 import { guestGuard } from './core/guards/guest.guard';
+import { PublicProfile } from './features/profile/pages/public-profile/public-profile';
 
 export const routes: Routes = [
     // Public - Home
@@ -35,6 +37,9 @@ export const routes: Routes = [
     // Public Post Detail 
     // MUST remain below the Auth Group so 'posts/new' is matched first
     { path: 'posts/:id', component: PostDetailPage, title: 'Post' },
+
+    // Public User Profile
+    { path: 'users/:id', component: PublicProfile, title: 'Profile' },
 
     // 🚫 Guest Group (Login/Register)
     // Logged-in users are kicked out to /feed

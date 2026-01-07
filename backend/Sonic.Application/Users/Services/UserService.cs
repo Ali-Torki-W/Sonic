@@ -101,6 +101,7 @@ public sealed class UserService(IUserRepository userRepository) : IUserService
             Id = user.Id,
             DisplayName = user.DisplayName,
             Bio = user.Bio,
+            JobRole = user.JobRole,
             AvatarUrl = user.AvatarUrl
         };
     }

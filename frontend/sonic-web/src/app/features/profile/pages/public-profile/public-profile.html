@@ -1,0 +1,64 @@
+<section class="pp">
+    <div class="pp__wrap">
+
+        <header class="pp__topbar">
+            <a class="pp__back" routerLink="/feed">
+                <span class="icon">←</span> Return to Feed
+            </a>
+        </header>
+
+        @if (loading()) {
+        <div class="pp__status pp__status--loading">
+            <div class="spinner"></div>
+            <p>Accessing Personnel File...</p>
+        </div>
+        }
+        @else if (error()) {
+        <div class="pp__status pp__status--error">
+            <div class="icon">⚠</div>
+            <div class="content">
+                <h3>Access Denied</h3>
+                <p>{{ error() }}</p>
+            </div>
+        </div>
+        }
+        @else if (profile(); as p) {
+        <article class="pp__card dossier">
+
+            <header class="dossier__header">
+                <div class="identity-visual">
+                    @if (p.avatarUrl) {
+                    <img [src]="p.avatarUrl" [alt]="p.displayName" class="avatar-img"
+                        onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+                    <div class="avatar-fallback" style="display: none">{{ getInitials(p.displayName) }}</div>
+                    } @else {
+                    <div class="avatar-fallback">{{ getInitials(p.displayName) }}</div>
+                    }
+                </div>
+
+                <div class="identity-data">
+                    <h1 class="name">{{ p.displayName }}</h1>
+
+                    @if (p.jobRole) {
+                    <span class="designation">{{ p.jobRole }}</span>
+                    } @else {
+                    <span class="designation" style="opacity: 0.5;">No Designation</span>
+                    }
+                </div>
+            </header>
+
+            <div class="dossier__body">
+                @if (p.bio) {
+                <div class="section">
+                    <h3 class="label"><span class="icon">📝</span> Bio:</h3>
+                    <p class="text">{{ p.bio }}</p>
+                </div>
+                } @else {
+                <p class="muted-text center">No Bio recorded.</p>
+                }
+            </div>
+
+        </article>
+        }
+    </div>
+</section>
