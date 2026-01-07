@@ -49,8 +49,7 @@ public class PostController(IPostService postService) : ApiControllerBase
             return BadRequest("Invalid request data.");
         }
 
-        var authorId = User.FindFirst("sub")?.Value;  // Claims-based author ID from JWT
-
+        var authorId = User.FindFirst("sub")?.Value;
         if (string.IsNullOrEmpty(authorId))
         {
             return Unauthorized("Author is not authenticated.");
@@ -69,7 +68,8 @@ public class PostController(IPostService postService) : ApiControllerBase
             AuthorId = post.AuthorId,
             CreatedAt = post.CreatedAt,
             UpdatedAt = post.UpdatedAt,
-            IsFeatured = post.IsFeatured
+            IsFeatured = post.IsFeatured,
+            CampaignGoal = post.CampaignGoal
         };
 
         return Ok(response);
@@ -100,7 +100,8 @@ public class PostController(IPostService postService) : ApiControllerBase
             AuthorId = post.AuthorId,
             CreatedAt = post.CreatedAt,
             UpdatedAt = post.UpdatedAt,
-            IsFeatured = post.IsFeatured
+            IsFeatured = post.IsFeatured,
+            CampaignGoal = post.CampaignGoal
         };
 
         return Ok(response);
@@ -140,7 +141,8 @@ public class PostController(IPostService postService) : ApiControllerBase
             AuthorId = post.AuthorId,
             CreatedAt = post.CreatedAt,
             UpdatedAt = post.UpdatedAt,
-            IsFeatured = post.IsFeatured
+            IsFeatured = post.IsFeatured,
+            CampaignGoal = post.CampaignGoal
         };
 
         return Ok(response);
@@ -163,6 +165,6 @@ public class PostController(IPostService postService) : ApiControllerBase
 
         await _postService.DeletePostAsync(id, userId, isAdmin, cancellationToken);
 
-        return NoContent(); // Successfully deleted (soft-delete)
+        return NoContent();
     }
 }

@@ -3,7 +3,7 @@
 
         <header class="pd__topbar">
             <a class="pd__back" routerLink="/feed">
-                <span class="icon">←</span> Back to Feed
+                <span class="icon">←</span> Back to home
             </a>
         </header>
 
@@ -19,7 +19,7 @@
             <div class="error-content">
                 <h3>Transmission Error</h3>
                 <p>{{ postError() }}</p>
-                <a routerLink="/feed" class="btn btn--ghost">Return to Command</a>
+                <a routerLink="/feed" class="btn btn--ghost">Return to home</a>
             </div>
         </div>
         }
@@ -36,9 +36,9 @@
                 <h1 class="post-title">{{ p.title }}</h1>
 
                 <div class="author-row">
-                    <a [routerLink]="['/users', p.authorId]" class="author-avatar clickable" title="View Dossier">
+                    <!-- <a [routerLink]="['/users', p.authorId]" class="author-avatar clickable" title="View Dossier">
                         {{ p.authorId.slice(0,1) }}
-                    </a>
+                    </a> -->
                     <div class="author-info">
                         <a [routerLink]="['/users', p.authorId]" class="name clickable" title="View Dossier">
                             {{ getAuthorName(p.authorId) }}
@@ -79,8 +79,8 @@
 
                 <div class="module-grid">
                     <div class="stat">
-                        <span class="label">Goal</span>
-                        <span class="value">{{ p.campaignGoal }}</span>
+                        <span class="label">Goal: </span>
+                        <div class="value">{{ p.campaignGoal }}</div>
                     </div>
                     <div class="stat">
                         <span class="label">Active Agents</span>
