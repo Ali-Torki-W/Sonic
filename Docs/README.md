@@ -2,7 +2,7 @@
 
 Sonic is a place where people share **how they actually use AI in real work**.
 
-Not another “AI blog” or “prompt dump”.
+Not another “AI blog”.
 
 It’s about things like:
 
@@ -11,7 +11,7 @@ It’s about things like:
 - “Here’s the best model + workflow I found for summarizing legal docs.”
 - “We want to run a small campaign to test AI in our team – who wants in?”
 
-Sonic is built as a portfolio-friendly, production-ish app: clean architecture, real auth, a proper front-end, and a real database behind it.
+Sonic is built as a portfolio-friendly, production app: clean architecture, real auth, a proper front-end, and a real database behind it.
 
 ---
 
